@@ -6,29 +6,21 @@ extern "C" {
 #endif
 
 // --------------------------------------------------------------------+
-// Common Configuration
+// Port Configuration
 // --------------------------------------------------------------------+
 #define CFG_TUSB_RHPORT0_MODE       (OPT_MODE_DEVICE | OPT_MODE_FULL_SPEED)
 
 // --------------------------------------------------------------------+
-// Device Configuration
+// Device Core Configuration
 // --------------------------------------------------------------------+
 #define CFG_TUD_ENABLED             1
 #define CFG_TUD_ENDPOINT0_SIZE      64
-
-#define FLASH_CONFIG_MAGIC    0x4D414352 // "MACR"
-#define FLASH_CONFIG_VERSION  1
 
 // --------------------------------------------------------------------+
 // HID Class Driver Configuration
 // --------------------------------------------------------------------+
 #define CFG_TUD_HID                 1
 #define CFG_TUD_HID_EP_BUFSIZE      64
-
-// --------------------------------------------------------------------+
-// Custom MacroDeck Configuration
-// --------------------------------------------------------------------+
-#define CONFIG_REPORT_SIZE          64
 
 #ifdef __cplusplus
 }

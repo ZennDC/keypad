@@ -17,7 +17,7 @@ dev = hid.device()
 dev.open(VID, PID)
 
 # 1. Send settings
-send_feature(dev, [0xFF, 1, 2, 80])                 # Display
+send_feature(dev, [0xFF, 1, 2, 85])                 # Display
 send_feature(dev, [0, 1, 0x04, 0x00])               # Key 0 -> 'A'
 send_feature(dev, [5, 2, 0xE2, 0x00])               # Key 5 -> Mute
 send_feature(dev, [15, 2, 0xE9, 0x00])              # Key 15 -> Vol Up
