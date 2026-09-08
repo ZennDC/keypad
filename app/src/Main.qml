@@ -9,10 +9,10 @@ import Configurator
 ApplicationWindow {
     id: root
     visible: true
-    width: 680
-    height: 540
-    minimumWidth: 620
-    minimumHeight: 500
+    width: 720
+    height: 560
+    minimumWidth: 640
+    minimumHeight: 520
     title: "Pico MacroDeck Studio"
     Material.theme: Material.Dark
     Material.accent: Material.Cyan
@@ -40,11 +40,9 @@ ApplicationWindow {
                 border.width: 1
 
                 RowLayout {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    anchors.leftMargin: 14
-                    anchors.rightMargin: 14
+                    anchors.fill: parent
+                    anchors.leftMargin: 16
+                    anchors.rightMargin: 16
                     spacing: 14
 
                     Item {
@@ -111,12 +109,12 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignVCenter
                         spacing: 2
+
                         Text {
                             text: "Pico MacroDeck Studio (0xCafe:0x4000)"
                             color: "#E6EDF3"
                             font.pixelSize: 13
                             font.bold: true
-                            wrapMode: Text.WordWrap
                         }
                         Text {
                             text: Backend.statusText
@@ -128,13 +126,21 @@ ApplicationWindow {
 
                     Button {
                         Layout.alignment: Qt.AlignVCenter
+                        text: "Save to Flash"
+                        enabled: Backend.connected
+                        onClicked: Backend.saveToFlash()
+                    }
+
+                    Button {
+                        Layout.alignment: Qt.AlignVCenter
                         text: Backend.connected ? "Disconnect" : "Connect"
                         highlighted: !Backend.connected
                         onClicked: {
-                            if (Backend.connected)
+                            if (Backend.connected) {
                                 Backend.disconnectDevice();
-                            else
+                            } else {
                                 Backend.connectDevice();
+                            }
                         }
                     }
                 }
@@ -145,10 +151,20 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 spacing: 20
 
+                // Cascades input disabling and visually dims when disconnected
+                enabled: Backend.connected
+                opacity: Backend.connected ? 1.0 : 0.35
+
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 200
+                    }
+                }
+
                 // 4x4 Interactive Matrix & Display
                 Rectangle {
                     Layout.preferredWidth: 320
-                    Layout.preferredHeight: 320
+                    Layout.preferredHeight: 340
                     radius: 10
                     color: "#0D1117"
                     border.color: "#30363D"
@@ -163,13 +179,13 @@ ApplicationWindow {
                         Rectangle {
                             id: screenItem
                             Layout.preferredWidth: 160
-                            Layout.preferredHeight: 65
+                            Layout.preferredHeight: 60
                             Layout.alignment: Qt.AlignCenter
                             radius: 4
 
                             readonly property bool isSelected: root.selectedKeyIndex === -1
 
-                            color: isSelected ? "#1F6FEB" : (screenArea.containsMouse ? "#21262D" : "#0A0D12")
+                            color: isSelected ? "#1F6FEB" : ((screenArea.containsMouse && Backend.connected) ? "#21262D" : "#0A0D12")
                             border.color: isSelected ? "#58A6FF" : "#30363D"
                             border.width: 1
 
@@ -202,7 +218,7 @@ ApplicationWindow {
                                 id: screenArea
                                 anchors.fill: parent
                                 hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
+                                cursorShape: Backend.connected ? Qt.PointingHandCursor : Qt.ArrowCursor
                                 onClicked: {
                                     root.selectedKeyIndex = -1;
                                 }
@@ -230,7 +246,7 @@ ApplicationWindow {
 
                                     readonly property bool isSelected: root.selectedKeyIndex === gridKey.index
 
-                                    color: isSelected ? "#1F6FEB" : (keyArea.containsMouse ? "#21262D" : "#161B22")
+                                    color: isSelected ? "#1F6FEB" : ((keyArea.containsMouse && Backend.connected) ? "#21262D" : "#161B22")
                                     border.color: isSelected ? "#58A6FF" : "#30363D"
                                     border.width: 1
 
@@ -257,7 +273,7 @@ ApplicationWindow {
                                         id: keyArea
                                         anchors.fill: parent
                                         hoverEnabled: true
-                                        cursorShape: Qt.PointingHandCursor
+                                        cursorShape: Backend.connected ? Qt.PointingHandCursor : Qt.ArrowCursor
                                         onClicked: {
                                             root.selectedKeyIndex = gridKey.index;
                                         }
@@ -271,7 +287,7 @@ ApplicationWindow {
                 // Configuration Panel
                 Rectangle {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 320
+                    Layout.preferredHeight: 340
                     radius: 10
                     color: "#161B22"
                     border.color: "#30363D"
@@ -302,68 +318,166 @@ ApplicationWindow {
                             Layout.fillWidth: true
                             textRole: "label"
                             valueRole: "code"
+
+                            leftPadding: 16
+                            rightPadding: 40
+
                             model: [
                                 {
                                     label: "Mute Volume",
-                                    code: 0xE0E2
+                                    icon: "qrc:/qt/qml/Configurator/assets/icons/volume-x.svg",
+                                    type: 0x02,
+                                    code: 0x00E2
                                 },
                                 {
                                     label: "Volume Up",
-                                    code: 0xE0E9
+                                    icon: "qrc:/qt/qml/Configurator/assets/icons/volume-2.svg",
+                                    type: 0x02,
+                                    code: 0x00E9
                                 },
                                 {
                                     label: "Volume Down",
-                                    code: 0xE0EA
+                                    icon: "qrc:/qt/qml/Configurator/assets/icons/volume-1.svg",
+                                    type: 0x02,
+                                    code: 0x00EA
                                 },
                                 {
                                     label: "Play / Pause",
-                                    code: 0xE0CD
+                                    icon: "qrc:/qt/qml/Configurator/assets/icons/play.svg",
+                                    type: 0x02,
+                                    code: 0x00CD
                                 },
                                 {
                                     label: "Next Track",
-                                    code: 0xE0B5
+                                    icon: "qrc:/qt/qml/Configurator/assets/icons/fast-forward.svg",
+                                    type: 0x02,
+                                    code: 0x00B5
                                 },
                                 {
-                                    label: "Prev Track",
-                                    code: 0xE0B6
+                                    label: "Previous Track",
+                                    icon: "qrc:/qt/qml/Configurator/assets/icons/rewind.svg",
+                                    type: 0x02,
+                                    code: 0x00B6
                                 },
                                 {
                                     label: "Key: Enter",
+                                    type: 0x01,
                                     code: 0x28
                                 },
                                 {
                                     label: "Key: Escape",
+                                    type: 0x01,
                                     code: 0x29
                                 },
                                 {
                                     label: "Key: Tab",
+                                    type: 0x01,
                                     code: 0x2B
                                 },
                                 {
                                     label: "Key: Space",
+                                    type: 0x01,
                                     code: 0x2C
                                 },
                                 {
                                     label: "Key: C",
+                                    type: 0x01,
                                     code: 0x06
                                 },
                                 {
                                     label: "Key: V",
+                                    type: 0x01,
                                     code: 0x19
                                 },
                                 {
                                     label: "Key: Z",
+                                    type: 0x01,
                                     code: 0x1D
                                 },
                                 {
                                     label: "Key: F13",
+                                    type: 0x01,
                                     code: 0x68
                                 },
                                 {
                                     label: "Key: F14",
+                                    type: 0x01,
                                     code: 0x69
+                                },
+                                {
+                                    label: "Key: F15",
+                                    type: 0x01,
+                                    code: 0x6A
+                                },
+                                {
+                                    label: "Key: F16",
+                                    type: 0x01,
+                                    code: 0x6B
                                 }
                             ]
+
+                            // Selected item layout
+                            contentItem: Item {
+                                implicitHeight: 24
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    spacing: 10
+
+                                    Image {
+                                        readonly property string currentIcon: actionSelect.model[actionSelect.currentIndex]?.icon || ""
+                                        visible: currentIcon !== ""
+                                        source: currentIcon
+                                        sourceSize.width: 16
+                                        sourceSize.height: 16
+                                        Layout.preferredWidth: visible ? 16 : 0
+                                        Layout.preferredHeight: visible ? 16 : 0
+                                        Layout.alignment: Qt.AlignVCenter
+                                        fillMode: Image.PreserveAspectFit
+                                    }
+
+                                    Text {
+                                        text: actionSelect.displayText
+                                        color: "#E6EDF3"
+                                        font.pixelSize: 13
+                                        verticalAlignment: Text.AlignVCenter
+                                        Layout.fillWidth: true
+                                        elide: Text.ElideRight
+                                    }
+                                }
+                            }
+
+                            // Dropdown item layout
+                            delegate: ItemDelegate {
+                                id: itemDel
+                                required property var modelData
+                                required property int index
+                                width: actionSelect.width
+
+                                contentItem: RowLayout {
+                                    spacing: 10
+
+                                    Image {
+                                        readonly property string iconPath: itemDel.modelData.icon || ""
+                                        visible: iconPath !== ""
+                                        source: iconPath
+                                        sourceSize.width: 16
+                                        sourceSize.height: 16
+                                        Layout.preferredWidth: visible ? 16 : 0
+                                        Layout.preferredHeight: visible ? 16 : 0
+                                        fillMode: Image.PreserveAspectFit
+                                    }
+
+                                    Text {
+                                        text: itemDel.modelData.label
+                                        color: itemDel.highlighted ? "#58A6FF" : "#E6EDF3"
+                                        font.pixelSize: 13
+                                        verticalAlignment: Text.AlignVCenter
+                                        Layout.fillWidth: true
+                                        elide: Text.ElideRight
+                                    }
+                                }
+                            }
                         }
 
                         Item {
@@ -372,12 +486,11 @@ ApplicationWindow {
 
                         Button {
                             Layout.fillWidth: true
-                            text: "Flash Switch " + (root.selectedKeyIndex + 1)
-                            enabled: Backend.connected
+                            text: "Apply Switch " + (root.selectedKeyIndex + 1)
                             highlighted: true
                             onClicked: {
-                                var selectedCode = Number(actionSelect.currentValue);
-                                Backend.sendConfig(root.selectedKeyIndex, selectedCode);
+                                var item = actionSelect.model[actionSelect.currentIndex];
+                                Backend.sendKeyConfig(root.selectedKeyIndex, item.type, item.code);
                             }
                         }
                     }
@@ -397,7 +510,7 @@ ApplicationWindow {
                         }
 
                         Label {
-                            text: "Display Content / Widget:"
+                            text: "Display Mode:"
                             color: "#8B949E"
                             font.pixelSize: 11
                         }
@@ -405,7 +518,7 @@ ApplicationWindow {
                         ComboBox {
                             id: displayModeSelect
                             Layout.fillWidth: true
-                            model: ["Hardware Monitor (CPU / RAM / GPU)", "Active Profile & Layer Overview", "Custom RGB565 Image / Logo", "Audio Visualizer (FFT)", "Static Color Fill / Test Pattern"]
+                            model: ["Hardware Monitor", "Active Profile Overview", "Custom RGB565 Image", "Audio Visualizer", "Color Pattern"]
                         }
 
                         RowLayout {
@@ -425,7 +538,7 @@ ApplicationWindow {
                                 ComboBox {
                                     id: orientationSelect
                                     Layout.fillWidth: true
-                                    model: ["Portrait (240x320)", "Landscape (320x240)", "Portrait Flipped", "Landscape Flipped"]
+                                    model: ["Portrait", "Landscape", "Portrait Inverted", "Landscape Inverted"]
                                 }
                             }
 
@@ -456,14 +569,10 @@ ApplicationWindow {
 
                         Button {
                             Layout.fillWidth: true
-                            text: "Upload ST7789 Config"
-                            enabled: Backend.connected
+                            text: "Apply Display Config"
                             highlighted: true
                             onClicked: {
-                                // Sends the display mode, rotation (0-3), and backlight duty cycle (0-100)
-                                if (Backend.sendDisplayConfig) {
-                                    Backend.sendDisplayConfig(displayModeSelect.currentIndex, orientationSelect.currentIndex, Math.round(brightnessSlider.value));
-                                }
+                                Backend.sendDisplayConfig(displayModeSelect.currentIndex, orientationSelect.currentIndex, Math.round(brightnessSlider.value));
                             }
                         }
                     }
