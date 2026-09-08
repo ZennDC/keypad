@@ -36,7 +36,8 @@ pico_sdk_init()
 # Add executable. Default name is the project name, version 0.1
 
 add_executable(Keypad Keypad.c
-usb_descriptors.c)
+usb_descriptors.c
+flash_storage.c)
 
 pico_set_program_name(Keypad "Keypad")
 pico_set_program_version(Keypad "0.1")
@@ -48,6 +49,8 @@ pico_enable_stdio_usb(Keypad 0)
 # Add the standard library to the build
 target_link_libraries(Keypad
     pico_stdlib
+    hardware_pwm
+    hardware_flash
     tinyusb_device
     tinyusb_board)
 

@@ -1,0 +1,13 @@
+{
+  "cmake.configureSettings": {
+    "CMAKE_PREFIX_PATH": "/home/zenndc/Qt/6.11.2/gcc_64"
+  },
+  "cmake.generator": "Ninja",
+
+  "qt-qml.qmlls.customExePath": "/home/zenndc/Qt/6.11.2/gcc_64/bin/qmlls",
+  "qt-qml.qmlls.additionalImportPaths": [
+    "/home/zenndc/Qt/6.11.2/gcc_64/qml",
+    "${workspaceFolder}/build"
+  ],
+  "qt-qml.qmllint.customExePath": "/home/zenndc/Qt/6.11.2/gcc_64/bin/qmllint"
+}
