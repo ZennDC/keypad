@@ -54,6 +54,7 @@ pico_enable_stdio_usb(Keypad 0)
 # ---------------------------------------------------------------------------
 target_include_directories(Keypad PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/include
+    ${CMAKE_CURRENT_LIST_DIR}/include/usb
     ${CMAKE_CURRENT_LIST_DIR}/../shared/include
 )
 
@@ -72,7 +73,11 @@ pico_add_extra_outputs(Keypad)
 # Bsp Test Executable
 # ---------------------------------------------------------------------------
 
-add_executable(bsp bsp.c )
+add_executable(bsp 
+    src/bsp-test.cpp
+    src/bsp/display.cpp
+    src/bsp/keyboard.cpp
+)
 
 pico_set_program_name(bsp "bsp")
 pico_set_program_version(bsp "0.1")
@@ -87,6 +92,10 @@ target_link_libraries(bsp
         hardware_spi
         hardware_gpio
         hardware_dma
+)
+
+target_include_directories(bsp PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/include
 )
 
 # Add the standard include files to the build
