@@ -23,15 +23,35 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(PICO_BOARD pico CACHE STRING "Board type")
 
-# Pull in SDK import script (located in firmware root)
 include(cmake/pico_sdk_import.cmake)
 
 project(Keypad C CXX ASM)
 
 pico_sdk_init()
 
+option(BUILD_TESTS "Build hardware test targets" ON)
+
 # ---------------------------------------------------------------------------
-# Executable & Sources
+# BSP Library
+# ---------------------------------------------------------------------------
+add_library(bsp STATIC
+    src/bsp/display.cpp
+    src/bsp/keyboard.cpp
+)
+
+target_include_directories(bsp PUBLIC
+    ${CMAKE_CURRENT_LIST_DIR}/include
+)
+
+target_link_libraries(bsp PUBLIC
+    pico_stdlib
+    hardware_spi
+    hardware_gpio
+    hardware_dma
+)
+
+# ---------------------------------------------------------------------------
+# Main Firmware Executable
 # ---------------------------------------------------------------------------
 add_executable(Keypad
     src/Keypad.c
@@ -45,63 +65,42 @@ add_executable(Keypad
 pico_set_program_name(Keypad "Keypad")
 pico_set_program_version(Keypad "0.1")
 
-# Standard I/O routing (USB CDC / UART)
 pico_enable_stdio_uart(Keypad 0)
 pico_enable_stdio_usb(Keypad 0)
 
-# ---------------------------------------------------------------------------
-# Include Directories & Dependencies
-# ---------------------------------------------------------------------------
 target_include_directories(Keypad PRIVATE
-    ${CMAKE_CURRENT_LIST_DIR}/include
     ${CMAKE_CURRENT_LIST_DIR}/include/usb
     ${CMAKE_CURRENT_LIST_DIR}/../shared/include
 )
 
-target_link_libraries(Keypad
-    pico_stdlib
+target_link_libraries(Keypad PRIVATE
+    bsp
     hardware_pwm
     hardware_flash
     tinyusb_device
     tinyusb_board
 )
 
-# Generate UF2, HEX, and map files
 pico_add_extra_outputs(Keypad)
 
 # ---------------------------------------------------------------------------
-# Bsp Test Executable
+# Hardware Tests
 # ---------------------------------------------------------------------------
+if(BUILD_TESTS)
+    add_executable(test_bsp
+        tests/bsp-test.cpp
+    )
 
-add_executable(bsp 
-    src/bsp-test.cpp
-    src/bsp/display.cpp
-    src/bsp/keyboard.cpp
-)
+    pico_set_program_name(test_bsp "test_bsp")
+    pico_set_program_version(test_bsp "0.1")
 
-pico_set_program_name(bsp "bsp")
-pico_set_program_version(bsp "0.1")
+    # Enable USB serial output for test logs
+    pico_enable_stdio_uart(test_bsp 0)
+    pico_enable_stdio_usb(test_bsp 1)
 
-# Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(bsp 0)
-pico_enable_stdio_usb(bsp 1)
+    target_link_libraries(test_bsp PRIVATE
+        bsp
+    )
 
-# Add the standard library to the build
-target_link_libraries(bsp
-        pico_stdlib
-        hardware_spi
-        hardware_gpio
-        hardware_dma
-)
-
-target_include_directories(bsp PRIVATE
-    ${CMAKE_CURRENT_LIST_DIR}/include
-)
-
-# Add the standard include files to the build
-target_include_directories(bsp PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}
-)
-
-pico_add_extra_outputs(bsp)
-
+    pico_add_extra_outputs(test_bsp)
+endif()

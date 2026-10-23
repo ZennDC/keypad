@@ -5,23 +5,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# --- Step 0: Execute bootloader.sh in the same directory (tools/) ---
-BOOTLOADER_SCRIPT="${SCRIPT_DIR}/bootloader.sh"
-
-if [ -f "$BOOTLOADER_SCRIPT" ]; then
-    echo "Running bootloader script: ${BOOTLOADER_SCRIPT}..."
-    bash "$BOOTLOADER_SCRIPT"
-    sleep 1 # Allow the USB bus a moment to detach and re-enumerate as RPI-RP2
-else
-    echo "Warning: '${BOOTLOADER_SCRIPT}' not found. Skipping bootloader trigger..." >&2
-fi
-
-# Path to your compiled UF2 binary anchored to project root
-UF2_FILE="${PROJECT_ROOT}/build/bsp.uf2"
+# Target selection: defaults to 'test_bsp', or accepts 'Keypad' / other target as $1
+TARGET="${1:-test_bsp}"
+UF2_FILE="${PROJECT_ROOT}/build/${TARGET}.uf2"
 
 # Ensure the binary exists before doing anything
 if [ ! -f "$UF2_FILE" ]; then
-    echo "Error: Binary not found at '$UF2_FILE'. Run 'cmake --build build' from project root first." >&2
+    echo "Error: Binary not found at '$UF2_FILE'." >&2
+    echo "Run 'cmake --build build --target ${TARGET}' first." >&2
     exit 1
 fi
 
@@ -39,7 +30,7 @@ done
 
 if [ -z "$DEV_PATH" ]; then
     echo "Error: RPI-RP2 drive not found." >&2
-    echo "Make sure the board is in BOOTSEL mode." >&2
+    echo "Make sure the board has been reset into BOOTSEL mode." >&2
     exit 1
 fi
 
@@ -51,7 +42,6 @@ MOUNTED_BY_SCRIPT=false
 
 if [ -z "$MOUNT_POINT" ]; then
     echo "Mounting $DEV_PATH via udisksctl..."
-    # udisksctl mounts user-space into /media/$USER/... or /run/media/$USER/...
     MOUNT_OUTPUT=$(udisksctl mount -b "$DEV_PATH")
     MOUNT_POINT=$(echo "$MOUNT_OUTPUT" | awk '{print $NF}' | tr -d '.')
     MOUNTED_BY_SCRIPT=true
@@ -63,7 +53,6 @@ fi
 cleanup() {
     if [ "$MOUNTED_BY_SCRIPT" = true ]; then
         echo "Cleaning up mount point..."
-        # Unmount if still present (device often auto-detaches once flashed)
         udisksctl unmount -b "$DEV_PATH" 2>/dev/null || true
     fi
 }
@@ -75,4 +64,4 @@ cp "$UF2_FILE" "$MOUNT_POINT/"
 # Sync to ensure write is flushed
 sync
 
-echo "Flash complete! The RP2040 is rebooting into your firmware."
+echo "Flash complete! The RP2040 is rebooting into '${TARGET}'."

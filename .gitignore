@@ -1,9 +1,12 @@
-build
 !.vscode/*
-.venv
-*/__pycache__/*
 
 # hardware
 *.FCBak
 *.step
+
+# firmware
+build
+.venv
+__pycache__
+hid_bootloader
 
