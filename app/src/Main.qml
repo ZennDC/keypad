@@ -20,6 +20,26 @@ ApplicationWindow {
     // -1 represents the screen display; 0-15 represent physical switches
     property int selectedKeyIndex: 0
 
+    // Resolves an SVG icon for known key bindings (matching controller lookup or action labels)
+    function getActionIcon(name) {
+        if (!name) return "";
+        const iconMap = {
+            "Mute":           "qrc:/qt/qml/Configurator/assets/icons/volume-x.svg",
+            "Mute Volume":    "qrc:/qt/qml/Configurator/assets/icons/volume-x.svg",
+            "Vol +":          "qrc:/qt/qml/Configurator/assets/icons/volume-2.svg",
+            "Volume Up":      "qrc:/qt/qml/Configurator/assets/icons/volume-2.svg",
+            "Vol -":          "qrc:/qt/qml/Configurator/assets/icons/volume-1.svg",
+            "Volume Down":    "qrc:/qt/qml/Configurator/assets/icons/volume-1.svg",
+            "Play/Pause":     "qrc:/qt/qml/Configurator/assets/icons/play.svg",
+            "Play / Pause":   "qrc:/qt/qml/Configurator/assets/icons/play.svg",
+            "Next":           "qrc:/qt/qml/Configurator/assets/icons/fast-forward.svg",
+            "Next Track":     "qrc:/qt/qml/Configurator/assets/icons/fast-forward.svg",
+            "Prev":           "qrc:/qt/qml/Configurator/assets/icons/rewind.svg",
+            "Previous Track": "qrc:/qt/qml/Configurator/assets/icons/rewind.svg"
+        };
+        return iconMap[name] || "";
+    }
+
     ScrollView {
         anchors.fill: parent
         contentWidth: availableWidth
@@ -245,6 +265,8 @@ ApplicationWindow {
                                     radius: 6
 
                                     readonly property bool isSelected: root.selectedKeyIndex === gridKey.index
+                                    readonly property string actionName: (Backend.keyLabels && Backend.keyLabels.length > gridKey.index) ? Backend.keyLabels[gridKey.index] : "..."
+                                    readonly property string actionIcon: root.getActionIcon(gridKey.actionName)
 
                                     color: isSelected ? "#1F6FEB" : ((keyArea.containsMouse && Backend.connected) ? "#21262D" : "#161B22")
                                     border.color: isSelected ? "#58A6FF" : "#30363D"
@@ -258,14 +280,39 @@ ApplicationWindow {
 
                                     ColumnLayout {
                                         anchors.centerIn: parent
-                                        spacing: 2
+                                        spacing: 3
 
+                                        // Icon if available
+                                        Image {
+                                            visible: gridKey.actionIcon !== ""
+                                            source: gridKey.actionIcon
+                                            sourceSize.width: 18
+                                            sourceSize.height: 18
+                                            Layout.preferredWidth: visible ? 18 : 0
+                                            Layout.preferredHeight: visible ? 18 : 0
+                                            Layout.alignment: Qt.AlignHCenter
+                                            fillMode: Image.PreserveAspectFit
+                                        }
+
+                                        // Text Action (White, shown when no icon exists)
+                                        Text {
+                                            visible: gridKey.actionIcon === ""
+                                            Layout.alignment: Qt.AlignHCenter
+                                            text: gridKey.actionName
+                                            color: "#FFFFFF"
+                                            font.bold: true
+                                            font.pixelSize: 11
+                                            elide: Text.ElideRight
+                                            Layout.maximumWidth: gridKey.width - 8
+                                            horizontalAlignment: Text.AlignHCenter
+                                        }
+
+                                        // Switch Hardware Identifier (Grey)
                                         Text {
                                             Layout.alignment: Qt.AlignHCenter
                                             text: "SW " + (gridKey.index + 1)
-                                            color: gridKey.isSelected ? "#FFFFFF" : "#C9D1D9"
-                                            font.bold: true
-                                            font.pixelSize: 12
+                                            color: gridKey.isSelected ? "#D0D7DE" : "#8B949E"
+                                            font.pixelSize: 9
                                         }
                                     }
 
@@ -274,9 +321,7 @@ ApplicationWindow {
                                         anchors.fill: parent
                                         hoverEnabled: true
                                         cursorShape: Backend.connected ? Qt.PointingHandCursor : Qt.ArrowCursor
-                                        onClicked: {
-                                            root.selectedKeyIndex = gridKey.index;
-                                        }
+                                        onClicked: root.selectedKeyIndex = gridKey.index
                                     }
                                 }
                             }
