@@ -45,38 +45,34 @@ fi
 
 echo "Found block device: $DEV_PATH"
 
-# Check if the device is already mounted by the desktop environment
+# Check if the device is already mounted
 MOUNT_POINT=$(lsblk -no MOUNTPOINT "$DEV_PATH" | tr -d '[:space:]')
-CREATED_TEMP_DIR=false
+MOUNTED_BY_SCRIPT=false
 
 if [ -z "$MOUNT_POINT" ]; then
-    # Not mounted: create a temporary mount directory and mount it
-    MOUNT_POINT=$(mktemp -d -t rpi_mount_XXXXXX)
-    CREATED_TEMP_DIR=true
-    echo "Mounting $DEV_PATH to $MOUNT_POINT..."
-    sudo mount "$DEV_PATH" "$MOUNT_POINT"
+    echo "Mounting $DEV_PATH via udisksctl..."
+    # udisksctl mounts user-space into /media/$USER/... or /run/media/$USER/...
+    MOUNT_OUTPUT=$(udisksctl mount -b "$DEV_PATH")
+    MOUNT_POINT=$(echo "$MOUNT_OUTPUT" | awk '{print $NF}' | tr -d '.')
+    MOUNTED_BY_SCRIPT=true
+    echo "Mounted to: $MOUNT_POINT"
 else
     echo "Device already mounted at: $MOUNT_POINT"
 fi
 
-# Clean up temporary mount on script exit/abort
 cleanup() {
-    if [ "$CREATED_TEMP_DIR" = true ]; then
+    if [ "$MOUNTED_BY_SCRIPT" = true ]; then
         echo "Cleaning up mount point..."
-        sudo umount "$MOUNT_POINT" 2>/dev/null || true
-        rmdir "$MOUNT_POINT" 2>/dev/null || true
+        # Unmount if still present (device often auto-detaches once flashed)
+        udisksctl unmount -b "$DEV_PATH" 2>/dev/null || true
     fi
 }
 trap cleanup EXIT
 
 echo "Flashing '$UF2_FILE' to $MOUNT_POINT..."
-if [ -w "$MOUNT_POINT" ]; then
-    cp "$UF2_FILE" "$MOUNT_POINT/"
-else
-    sudo cp "$UF2_FILE" "$MOUNT_POINT/"
-fi
+cp "$UF2_FILE" "$MOUNT_POINT/"
 
-# Sync to ensure the write finishes completely
+# Sync to ensure write is flushed
 sync
 
 echo "Flash complete! The RP2040 is rebooting into your firmware."
