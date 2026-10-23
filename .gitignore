@@ -1,3 +1,9 @@
 build
 !.vscode/*
 .venv
+*/__pycache__/*
+
+# hardware
+*.FCBak
+*.step
+
