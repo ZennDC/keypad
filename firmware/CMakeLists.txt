@@ -21,26 +21,6 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# ---------------------------------------------------------------------------
-# Raspberry Pi Pico VS Code Extension Integration
-# == DO NOT EDIT THE FOLLOWING LINES for the extension to work ==
-# ---------------------------------------------------------------------------
-if(WIN32)
-    set(USERHOME $ENV{USERPROFILE})
-else()
-    set(USERHOME $ENV{HOME})
-endif()
-
-set(sdkVersion 2.3.0)
-set(toolchainVersion 15_2_Rel1)
-set(picotoolVersion 2.3.0)
-set(picoVscode "${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake")
-
-if(EXISTS "${picoVscode}")
-    include("${picoVscode}")
-endif()
-# ===========================================================================
-
 set(PICO_BOARD pico CACHE STRING "Board type")
 
 # Pull in SDK import script (located in firmware root)
@@ -87,3 +67,32 @@ target_link_libraries(Keypad
 
 # Generate UF2, HEX, and map files
 pico_add_extra_outputs(Keypad)
+
+# ---------------------------------------------------------------------------
+# Bsp Test Executable
+# ---------------------------------------------------------------------------
+
+add_executable(bsp bsp.c )
+
+pico_set_program_name(bsp "bsp")
+pico_set_program_version(bsp "0.1")
+
+# Modify the below lines to enable/disable output over UART/USB
+pico_enable_stdio_uart(bsp 0)
+pico_enable_stdio_usb(bsp 1)
+
+# Add the standard library to the build
+target_link_libraries(bsp
+        pico_stdlib
+        hardware_spi
+        hardware_gpio
+        hardware_dma
+)
+
+# Add the standard include files to the build
+target_include_directories(bsp PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}
+)
+
+pico_add_extra_outputs(bsp)
+
