@@ -1,6 +1,7 @@
 #include "usb_descriptors.h"
 #include "config_manager.h"
 #include "tusb.h"
+#include "pico/bootrom.h"
 #include <string.h>
 
 // -----------------------------------------------------------------------------
@@ -139,12 +140,18 @@ uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id,
     return reqlen;
 }
 
-// In tud_hid_set_report_cb:
 void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, 
                            hid_report_type_t report_type, 
                            uint8_t const *buffer, uint16_t bufsize) {
     (void)instance;
+
     if (report_type == HID_REPORT_TYPE_FEATURE && report_id == REPORT_ID_CONFIG_FEATURE) {
+        // Intercept magic byte 0xBB to reboot into UF2 / BOOTSEL mode
+        if (bufsize > 0 && buffer[0] == 0xBB) {
+            reset_usb_boot(0, 0);
+            return;
+        }
+
         config_manager_handle_packet(buffer, bufsize);
     }
 }
