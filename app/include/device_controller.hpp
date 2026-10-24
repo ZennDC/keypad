@@ -3,30 +3,12 @@
 #include <QObject>
 #include <QString>
 #include <QStringList>
-#include <QTimer>
 #include <QVariantList>
-#include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
-#include <array>
-#include <vector>
+#include <memory>
 
-#include "protocol.hpp"
-
-struct hid_device_;
-typedef struct hid_device_ hid_device;
-
-struct ActionInfo {
-    QString label;        // Full action description (e.g., "Volume Up", "Key: Enter")
-    QString shortLabel;   // Compact badge label (e.g., "Vol +", "Enter")
-    QString icon;         // Resource SVG path
-    int reportType = 0;   // 0: None, 1: Keyboard, 2: Consumer
-    uint16_t usageCode = 0; // HID usage code
-};
-
-struct KeyState {
-    uint8_t reportType = 0;
-    uint16_t usageCode = 0;
-};
+#include "hid_transport.hpp"
+#include "key_model.hpp"
 
 class DeviceController : public QObject {
     Q_OBJECT
@@ -35,7 +17,7 @@ class DeviceController : public QObject {
 
     Q_PROPERTY(bool connected READ isConnected NOTIFY connectionChanged)
     Q_PROPERTY(QString statusText READ statusText NOTIFY statusChanged)
-    Q_PROPERTY(QVariantList keys READ keys NOTIFY keysChanged)
+    Q_PROPERTY(KeyModel* keyModel READ keyModel CONSTANT)
     Q_PROPERTY(QStringList keyLabels READ keyLabels NOTIFY keysChanged)
     Q_PROPERTY(QVariantList availableActions READ availableActions CONSTANT)
     Q_PROPERTY(QStringList displayModes READ displayModes CONSTANT)
@@ -46,12 +28,11 @@ class DeviceController : public QObject {
 
 public:
     explicit DeviceController(QObject *parent = nullptr);
-    ~DeviceController() override;
 
-    [[nodiscard]] bool isConnected() const noexcept { return m_device != nullptr; }
+    [[nodiscard]] bool isConnected() const noexcept { return m_transport->isConnected(); }
     [[nodiscard]] QString statusText() const { return m_statusText; }
-    [[nodiscard]] QVariantList keys() const;
-    [[nodiscard]] QStringList keyLabels() const;
+    [[nodiscard]] KeyModel* keyModel() const noexcept { return m_keyModel; }
+    [[nodiscard]] QStringList keyLabels() const { return m_keyModel->labels(); }
     [[nodiscard]] QVariantList availableActions() const;
     [[nodiscard]] QStringList displayModes() const;
     [[nodiscard]] QStringList displayOrientations() const;
@@ -74,23 +55,13 @@ signals:
     void keysChanged();
     void displayConfigLoaded();
 
-private slots:
-    void pollConnection();
-
 private:
-    void updateStatus(const QString &message);
-    void handleDeviceError(const QString &context);
+    void updateStatus(const QString &text);
 
-    static const std::vector<ActionInfo>& actionCatalog();
-    static ActionInfo resolveAction(uint8_t type, uint16_t code);
-    static int findActionIndex(uint8_t type, uint16_t code);
+    std::unique_ptr<HidTransport> m_transport;
+    KeyModel *m_keyModel = nullptr;
 
-    hid_device *m_device = nullptr;
-    QTimer m_pollTimer;
     QString m_statusText = QStringLiteral("Disconnected");
-    bool m_userDisconnected = false;
-
-    std::array<KeyState, zdc::protocol::NumMacroKeys> m_keys{};
     int m_displayMode = 0;
     int m_displayOrientation = 0;
     int m_displayBrightness = 80;

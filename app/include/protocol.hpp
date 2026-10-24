@@ -81,4 +81,3 @@ struct alignas(4) PersistentConfig {
 };
 
 } // namespace zdc::protocol
-
