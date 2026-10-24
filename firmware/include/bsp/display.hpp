@@ -32,6 +32,9 @@ public:
     // Scherm aan/uit of helderheid aanpassen via PWM (0-100%)
     void set_backlight(uint8_t percent);
 
+    // Scherm in/uit slaapstand schakelen
+    void set_sleep(bool sleep);
+
 private:
     void write_cmd(uint8_t cmd);
     void write_data(uint8_t data);

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <functional>
 #include <span>
+#include <string_view>
 
 #include "protocol.hpp"
 
@@ -38,6 +39,16 @@ public:
 
     [[nodiscard]] zdc::protocol::MacroKey* keys_data() { return keys_; }
 
+    // Profile / Layer management
+    [[nodiscard]] uint8_t active_profile() const { return current_profile_; }
+    [[nodiscard]] std::string_view active_profile_name() const;
+    void next_profile();
+    void prev_profile();
+    [[nodiscard]] const zdc::protocol::KeyConfig& get_active_key_config(uint8_t index) const;
+
+    // Reset settings to factory defaults in flash
+    bool reset_to_factory_defaults();
+
     // Commit current configuration to flash
     bool save_to_flash();
 
@@ -45,6 +56,8 @@ private:
     ConfigManager() = default;
     ConfigManager(const ConfigManager&) = delete;
     ConfigManager& operator=(const ConfigManager&) = delete;
+
+    uint8_t current_profile_{0};
 
     zdc::protocol::DisplayConfig display_cfg_{};
     zdc::protocol::MacroKey keys_[zdc::protocol::NumMacroKeys]{};

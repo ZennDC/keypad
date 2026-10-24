@@ -74,9 +74,12 @@ void Display::init() {
     gpio_set_dir(rst_pin, GPIO_OUT);
     gpio_put(rst_pin, 1);
 
-    gpio_init(bl_pin);
-    gpio_set_dir(bl_pin, GPIO_OUT);
-    gpio_put(bl_pin, 1); // Backlight default aan
+    gpio_set_function(bl_pin, GPIO_FUNC_PWM);
+    uint slice_num = pwm_gpio_to_slice_num(bl_pin);
+    pwm_config config = pwm_get_default_config();
+    pwm_config_set_clkdiv(&config, 4.0f);
+    pwm_config_set_wrap(&config, 255);
+    pwm_init(slice_num, &config, true);
 
     // 3. Hardware reset cyclus
     gpio_put(rst_pin, 0);
@@ -102,9 +105,18 @@ void Display::init() {
 void Display::set_backlight(uint8_t percent) {
     if (percent > 100)
         percent = 100;
-    // TFT_BL_PIN is GP22
-    uint slice_num = pwm_gpio_to_slice_num(22);
-    pwm_set_chan_level(slice_num, pwm_gpio_to_channel(22), (percent * 255) / 100);
+    pwm_set_gpio_level(bl_pin, (percent * 255) / 100);
+}
+
+void Display::set_sleep(bool sleep) {
+    if (sleep) {
+        set_backlight(0);
+        write_cmd(0x10); // ST7789 Sleep In
+    } else {
+        write_cmd(0x11); // ST7789 Sleep Out
+        sleep_ms(120);
+        write_cmd(0x29); // Display ON
+    }
 }
 
 void Display::fill_rect(int16_t x, int16_t y, uint16_t w, uint16_t h, graphics::Color color) {

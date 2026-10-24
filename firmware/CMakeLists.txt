@@ -56,6 +56,7 @@ target_link_libraries(bsp PUBLIC
 # ---------------------------------------------------------------------------
 add_executable(Keypad
     src/Keypad.cpp
+    src/menu_controller.cpp
     src/usb/usb_descriptors.cpp
     src/flash_storage.cpp
     src/config_manager.cpp
