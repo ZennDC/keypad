@@ -4,9 +4,11 @@
 *.FCBak
 *.step
 
-# firmware
-build
+# firmware / app / tests build directories
+firmware/build
+app/build
+tests/build
+build/
 .venv
 __pycache__
 hid_bootloader
-

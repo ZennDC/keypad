@@ -75,6 +75,18 @@ target_link_libraries(app
         PkgConfig::HIDAPI
 )
 
+# ---------------------------------------------------------------------------
+# Compiler Warnings & Enforcement
+# ---------------------------------------------------------------------------
+option(STRICT_WARNINGS "Treat compiler warnings as errors" OFF)
+if(STRICT_WARNINGS)
+    if(MSVC)
+        target_compile_options(app PRIVATE /W4 /WX)
+    else()
+        target_compile_options(app PRIVATE -Wall -Wextra -Werror)
+    endif()
+endif()
+
 install(TARGETS app
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )

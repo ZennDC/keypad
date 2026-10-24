@@ -104,3 +104,20 @@ if(BUILD_TESTS)
 
     pico_add_extra_outputs(test_bsp)
 endif()
+
+# ---------------------------------------------------------------------------
+# Compiler Warnings & Enforcement
+# ---------------------------------------------------------------------------
+option(STRICT_WARNINGS "Treat compiler warnings as errors" OFF)
+if(STRICT_WARNINGS)
+    if(MSVC)
+        set(KEYPAD_WARNING_FLAGS /W4 /WX)
+    else()
+        set(KEYPAD_WARNING_FLAGS -Wall -Wextra -Werror)
+    endif()
+    target_compile_options(bsp PRIVATE ${KEYPAD_WARNING_FLAGS})
+    target_compile_options(Keypad PRIVATE ${KEYPAD_WARNING_FLAGS})
+    if(BUILD_TESTS)
+        target_compile_options(test_bsp PRIVATE ${KEYPAD_WARNING_FLAGS})
+    endif()
+endif()

@@ -40,7 +40,7 @@ jobs:
         env:
           PICO_SDK_PATH: ${{ runner.temp }}/pico-sdk
         run: |
-          cmake -B firmware/build -S firmware -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake -B firmware/build -S firmware -G Ninja -DCMAKE_BUILD_TYPE=Release -DSTRICT_WARNINGS=ON
           cmake --build firmware/build --target Keypad --parallel
 
       # --- 2. Build Configurator App ---
@@ -56,7 +56,7 @@ jobs:
 
       - name: Build Desktop App
         run: |
-          cmake -B app/build -S app -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake -B app/build -S app -G Ninja -DCMAKE_BUILD_TYPE=Release -DSTRICT_WARNINGS=ON
           cmake --build app/build --target app --parallel
 
       # --- 3. Package & Publish Release ---
