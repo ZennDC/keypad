@@ -60,6 +60,7 @@ add_executable(Keypad
     src/usb/usb_descriptors.cpp
     src/flash_storage.cpp
     src/config_manager.cpp
+    src/tap_dance.cpp
 )
 
 pico_set_program_name(Keypad "Keypad")

@@ -129,6 +129,15 @@ public:
     // Update routine called in main loop
     void update(uint32_t now_ms, const bsp::Keyboard& keyboard);
 
+    // Update single key state machine (for selective per-key routing)
+    void update_key(size_t key_idx, uint32_t now_ms, bool is_down);
+
+    // Expire completed tap pulses across all keys
+    void update_pulses(uint32_t now_ms);
+
+    // Reset specific key tracker (e.g. when switched to Normal mode)
+    void reset_key(size_t key_idx);
+
     // HID report generator: populates active keyboard keycodes & consumer control
     void populate_hid_report(uint8_t keycodes[6], uint8_t& keycode_count, uint16_t& consumer_code, bool& has_consumer);
 

@@ -10,9 +10,26 @@
 #include "menu_controller.hpp"
 #include "protocol.hpp"
 
+#include "tap_dance.hpp"
+
 using namespace zdc::protocol;
+using namespace zdc::input;
 
 namespace {
+
+static TapDanceEngine g_tap_dance_engine;
+static uint8_t g_last_profile = 0xFF;
+
+static void sync_tap_dance_bindings(const config::ConfigManager& cfg_mgr) {
+    for (uint8_t i = 0; i < NumMacroKeys; ++i) {
+        const auto& key_cfg = cfg_mgr.get_active_key_config(i);
+        if (key_cfg.binding_type == BindingType::TapDance) {
+            g_tap_dance_engine.set_from_key_config(i, key_cfg);
+        } else {
+            g_tap_dance_engine.reset_key(i);
+        }
+    }
+}
 
 static void process_keyboard_events(bsp::Board& board) {
     auto& menu = ui::MenuController::instance();
@@ -25,62 +42,119 @@ static void process_keyboard_events(bsp::Board& board) {
     auto& cfg_mgr = config::ConfigManager::instance();
     MacroKey* keys = cfg_mgr.keys_data();
 
-    bool state_changed = false;
-    bool consumer_released = false;
+    // Check if active profile changed, sync bindings if so
+    uint8_t current_profile = cfg_mgr.active_profile();
+    if (current_profile != g_last_profile) {
+        g_last_profile = current_profile;
+        sync_tap_dance_bindings(cfg_mgr);
+    }
+
+    uint32_t now_ms = to_ms_since_boot(get_absolute_time());
 
     // 1. Process visual and debounce updates for matrix keys (0..15)
+    bool normal_state_changed = false;
+    bool normal_consumer_released = false;
+
+    // Expire completed tap-dance pulses
+    g_tap_dance_engine.update_pulses(now_ms);
+
     for (uint8_t i = 0; i < NumMacroKeys; ++i) {
         auto key_id = static_cast<bsp::Key>(i);
+        const auto& key_cfg = cfg_mgr.get_active_key_config(i);
+        bool is_down = board.keys.is_down(key_id);
 
         if (board.keys.just_pressed(key_id)) {
             keys[i].was_pressed = true;
             menu.draw_key_slot(board.display, i, true);
-            state_changed = true;
+            if (key_cfg.binding_type == BindingType::Normal) {
+                normal_state_changed = true;
+            }
         } else if (board.keys.just_released(key_id)) {
             keys[i].was_pressed = false;
             menu.draw_key_slot(board.display, i, false);
-            state_changed = true;
-            const auto& key_cfg = cfg_mgr.get_active_key_config(i);
-            if (key_cfg.report_type == ReportType::Consumer) {
-                consumer_released = true;
+            if (key_cfg.binding_type == BindingType::Normal) {
+                normal_state_changed = true;
+                if (key_cfg.report_type == ReportType::Consumer) {
+                    normal_consumer_released = true;
+                }
             }
+        }
+
+        // Route TAP_DANCE keys to the tap-dance state buffer
+        if (key_cfg.binding_type == BindingType::TapDance) {
+            g_tap_dance_engine.update_key(i, now_ms, is_down);
         }
     }
 
-    if (!state_changed || !tud_hid_ready())
-        return;
+    bool tap_dance_changed = g_tap_dance_engine.has_hid_state_changed();
+    if (tap_dance_changed) {
+        g_tap_dance_engine.clear_hid_state_changed();
+    }
 
-    // 2. Scan active keys from current active profile
+    if (!normal_state_changed && !tap_dance_changed) {
+        return;
+    }
+
+    if (!tud_hid_ready()) {
+        return;
+    }
+
+    // 2. Aggregate reports: NORMAL keys (immediate) + TAP_DANCE keys (buffer/pulses/holds)
     uint8_t keycodes[6] = {0};
     uint8_t keycode_idx = 0;
     uint16_t consumer_code = 0;
     bool has_consumer = false;
 
+    auto add_keycode = [&](uint8_t code) {
+        if (code == 0 || keycode_idx >= 6)
+            return;
+        for (uint8_t k = 0; k < keycode_idx; ++k) {
+            if (keycodes[k] == code)
+                return;
+        }
+        keycodes[keycode_idx++] = code;
+    };
+
+    // A. Direct immediate scan for NORMAL keys
     for (uint8_t i = 0; i < NumMacroKeys; ++i) {
         if (board.keys.is_down(static_cast<bsp::Key>(i))) {
             const auto& key_cfg = cfg_mgr.get_active_key_config(i);
-            if (key_cfg.report_type == ReportType::Consumer) {
-                consumer_code = key_cfg.usage_code;
-                has_consumer = true;
-            } else if (key_cfg.report_type == ReportType::Keyboard) {
-                if (keycode_idx < 6) {
-                    keycodes[keycode_idx++] = static_cast<uint8_t>(key_cfg.usage_code);
+            if (key_cfg.binding_type == BindingType::Normal) {
+                if (key_cfg.report_type == ReportType::Consumer) {
+                    consumer_code = key_cfg.usage_code;
+                    has_consumer = true;
+                } else if (key_cfg.report_type == ReportType::Keyboard) {
+                    add_keycode(static_cast<uint8_t>(key_cfg.usage_code));
                 }
             }
         }
     }
 
+    // B. Merge active TAP_DANCE keys (pulses and holds)
+    uint8_t td_keycodes[6] = {0};
+    uint8_t td_count = 0;
+    uint16_t td_consumer = 0;
+    bool td_has_consumer = false;
+    g_tap_dance_engine.populate_hid_report(td_keycodes, td_count, td_consumer, td_has_consumer);
+
+    for (uint8_t k = 0; k < td_count; ++k) {
+        add_keycode(td_keycodes[k]);
+    }
+    if (td_has_consumer) {
+        consumer_code = td_consumer;
+        has_consumer = true;
+    }
+
     // 3. Dispatch Consumer Report
     if (has_consumer) {
         tud_hid_report(static_cast<uint8_t>(ReportId::ConsumerControl), &consumer_code, sizeof(consumer_code));
-    } else if (consumer_released) {
-        // Send release (0) report so the OS stops repeating the media key
+    } else if (normal_consumer_released || (!has_consumer && tap_dance_changed)) {
         uint16_t empty = 0;
         tud_hid_report(static_cast<uint8_t>(ReportId::ConsumerControl), &empty, sizeof(empty));
     }
 
-    // 4. Dispatch Keyboard Report
-    if (keycode_idx > 0 || !has_consumer) {
+    // 4. Dispatch Keyboard Report (immediate 0 ms latency for NORMAL keys)
+    if (keycode_idx > 0 || !has_consumer || normal_state_changed || tap_dance_changed) {
         tud_hid_keyboard_report(static_cast<uint8_t>(ReportId::Keyboard), 0, keycodes);
     }
 }

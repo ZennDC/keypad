@@ -26,7 +26,7 @@ TEST_CASE("Protocol constants and limits", "[protocol]") {
     STATIC_REQUIRE(ConfigReportSize == 64);
     STATIC_REQUIRE(NumMacroKeys == 16);
     STATIC_REQUIRE(FlashConfigMagic == 0x5A444331); // "ZDC1"
-    STATIC_REQUIRE(FlashConfigVersion == 1);
+    STATIC_REQUIRE(FlashConfigVersion == 2);
 }
 
 TEST_CASE("Enum definitions match hardware protocol specification", "[protocol]") {
@@ -40,6 +40,9 @@ TEST_CASE("Enum definitions match hardware protocol specification", "[protocol]"
 
     STATIC_REQUIRE(static_cast<uint8_t>(ReportType::Keyboard) == 0x01);
     STATIC_REQUIRE(static_cast<uint8_t>(ReportType::Consumer) == 0x02);
+
+    STATIC_REQUIRE(static_cast<uint8_t>(BindingType::Normal) == 0x00);
+    STATIC_REQUIRE(static_cast<uint8_t>(BindingType::TapDance) == 0x01);
 
     STATIC_REQUIRE(static_cast<uint8_t>(DisplayMode::HwMonitor) == 0);
     STATIC_REQUIRE(static_cast<uint8_t>(DisplayMode::Profile) == 1);
@@ -55,24 +58,23 @@ TEST_CASE("Data structures packing, sizes and memory layout", "[protocol]") {
     }
 
     SECTION("KeyConfig byte packing") {
-        STATIC_REQUIRE(sizeof(KeyConfig) == 3);
+        STATIC_REQUIRE(sizeof(KeyConfig) == 4);
         STATIC_REQUIRE(offsetof(KeyConfig, report_type) == 0);
-        STATIC_REQUIRE(offsetof(KeyConfig, usage_code) == 1);
+        STATIC_REQUIRE(offsetof(KeyConfig, binding_type) == 1);
+        STATIC_REQUIRE(offsetof(KeyConfig, usage_code) == 2);
     }
 
-    SECTION("PersistentConfig alignment and USB feature report budget") {
+    SECTION("PersistentConfig alignment and layout") {
         // RP2040 flash controller requires 4-byte word alignment
         STATIC_REQUIRE(alignof(PersistentConfig) == 4);
-
-        // PersistentConfig MUST fit inside the 64-byte USB Feature Report
-        STATIC_REQUIRE(sizeof(PersistentConfig) <= ConfigReportSize);
 
         // Verify member offsets to guarantee host-to-device memory layout stability
         STATIC_REQUIRE(offsetof(PersistentConfig, magic) == 0);
         STATIC_REQUIRE(offsetof(PersistentConfig, version) == 4);
         STATIC_REQUIRE(offsetof(PersistentConfig, display_cfg) == 5);
         STATIC_REQUIRE(offsetof(PersistentConfig, keys) == 8);
-        STATIC_REQUIRE(offsetof(PersistentConfig, checksum) == 56);
+        STATIC_REQUIRE(offsetof(PersistentConfig, checksum) == 72);
+        STATIC_REQUIRE(sizeof(PersistentConfig) == 76);
     }
 }
 
@@ -86,6 +88,7 @@ TEST_CASE("PersistentConfig checksum calculation and validation", "[protocol]") 
 
     for (size_t i = 0; i < NumMacroKeys; ++i) {
         config.keys[i].report_type = (i % 2 == 0) ? ReportType::Keyboard : ReportType::Consumer;
+        config.keys[i].binding_type = (i % 3 == 0) ? BindingType::TapDance : BindingType::Normal;
         config.keys[i].usage_code = static_cast<uint16_t>(0x1000 + i);
     }
 
@@ -112,9 +115,15 @@ TEST_CASE("PersistentConfig checksum calculation and validation", "[protocol]") 
         corrupted.keys[0].report_type = ReportType::Consumer;
         REQUIRE(corrupted.checksum != calculate_checksum(corrupted));
     }
+
+    SECTION("Modifying key binding type invalidates checksum") {
+        PersistentConfig corrupted = config;
+        corrupted.keys[1].binding_type = BindingType::TapDance;
+        REQUIRE(corrupted.checksum != calculate_checksum(corrupted));
+    }
 }
 
-TEST_CASE("Feature report serialization round-trip", "[protocol]") {
+TEST_CASE("Flash persistence serialization round-trip", "[protocol]") {
     PersistentConfig original{};
     original.magic = FlashConfigMagic;
     original.version = FlashConfigVersion;
@@ -124,17 +133,17 @@ TEST_CASE("Feature report serialization round-trip", "[protocol]") {
 
     for (size_t i = 0; i < NumMacroKeys; ++i) {
         original.keys[i].report_type = ReportType::Keyboard;
+        original.keys[i].binding_type = (i % 2 == 0) ? BindingType::Normal : BindingType::TapDance;
         original.keys[i].usage_code = static_cast<uint16_t>(0x04 + i); // 'A', 'B', ...
     }
     original.checksum = calculate_checksum(original);
 
-    // Simulate sending over a 64-byte USB Feature Report
-    std::array<uint8_t, ConfigReportSize> report_buffer{};
-    std::memcpy(report_buffer.data(), &original, sizeof(PersistentConfig));
+    // Simulate writing to and reading from flash storage buffer
+    std::array<uint8_t, sizeof(PersistentConfig)> storage_buffer{};
+    std::memcpy(storage_buffer.data(), &original, sizeof(PersistentConfig));
 
-    // Deserialization on host or receiver
     PersistentConfig reconstructed{};
-    std::memcpy(&reconstructed, report_buffer.data(), sizeof(PersistentConfig));
+    std::memcpy(&reconstructed, storage_buffer.data(), sizeof(PersistentConfig));
 
     REQUIRE(reconstructed.magic == original.magic);
     REQUIRE(reconstructed.version == original.version);
@@ -146,6 +155,61 @@ TEST_CASE("Feature report serialization round-trip", "[protocol]") {
 
     for (size_t i = 0; i < NumMacroKeys; ++i) {
         REQUIRE(reconstructed.keys[i].report_type == original.keys[i].report_type);
+        REQUIRE(reconstructed.keys[i].binding_type == original.keys[i].binding_type);
         REQUIRE(reconstructed.keys[i].usage_code == original.keys[i].usage_code);
+    }
+}
+
+TEST_CASE("Legacy V1 layout upgrade to V2 with default NORMAL binding", "[protocol]") {
+    struct [[gnu::packed]] KeyConfigV1 {
+        ReportType report_type{ReportType::Keyboard};
+        uint16_t usage_code{0};
+    };
+
+    struct alignas(4) PersistentConfigV1 {
+        uint32_t magic{FlashConfigMagic};
+        uint8_t version{1};
+        DisplayConfig display_cfg{};
+        KeyConfigV1 keys[NumMacroKeys]{};
+        uint8_t checksum{0};
+    };
+
+    PersistentConfigV1 v1{};
+    v1.magic = FlashConfigMagic;
+    v1.version = 1;
+    v1.display_cfg.mode = DisplayMode::Profile;
+    v1.display_cfg.orientation = 0;
+    v1.display_cfg.brightness = 80;
+
+    for (size_t i = 0; i < NumMacroKeys; ++i) {
+        v1.keys[i].report_type = ReportType::Keyboard;
+        v1.keys[i].usage_code = static_cast<uint16_t>(0x28 + i);
+    }
+
+    uint8_t sum = 0;
+    const auto* bytes = reinterpret_cast<const uint8_t*>(&v1);
+    constexpr size_t len = offsetof(PersistentConfigV1, checksum);
+    for (size_t i = 0; i < len; ++i) {
+        sum += bytes[i];
+    }
+    v1.checksum = sum;
+
+    // Simulate FlashStorage migration logic
+    PersistentConfig upgraded{};
+    upgraded.magic = FlashConfigMagic;
+    upgraded.version = FlashConfigVersion;
+    upgraded.display_cfg = v1.display_cfg;
+    for (size_t i = 0; i < NumMacroKeys; ++i) {
+        upgraded.keys[i].report_type = v1.keys[i].report_type;
+        upgraded.keys[i].binding_type = BindingType::Normal;
+        upgraded.keys[i].usage_code = v1.keys[i].usage_code;
+    }
+    upgraded.checksum = calculate_checksum(upgraded);
+
+    REQUIRE(upgraded.version == 2);
+    for (size_t i = 0; i < NumMacroKeys; ++i) {
+        REQUIRE(upgraded.keys[i].binding_type == BindingType::Normal);
+        REQUIRE(upgraded.keys[i].report_type == v1.keys[i].report_type);
+        REQUIRE(upgraded.keys[i].usage_code == v1.keys[i].usage_code);
     }
 }

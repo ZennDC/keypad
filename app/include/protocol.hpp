@@ -11,7 +11,7 @@ namespace zdc::protocol {
 inline constexpr size_t ConfigReportSize = 64;
 inline constexpr size_t NumMacroKeys = 16;
 inline constexpr uint32_t FlashConfigMagic = 0x5A444331; // ASCII "ZDC1"
-inline constexpr uint8_t FlashConfigVersion = 1;
+inline constexpr uint8_t FlashConfigVersion = 2;
 
 // ---------------------------------------------------------------------------
 // HID Report IDs
@@ -40,6 +40,14 @@ enum class ReportType : uint8_t {
 };
 
 // ---------------------------------------------------------------------------
+// Binding Types (Normal vs TapDance)
+// ---------------------------------------------------------------------------
+enum class BindingType : uint8_t {
+    Normal = 0x00,   // Key down sends immediate HID report (0 ms latency)
+    TapDance = 0x01, // Key events intercepted by tap-dance engine & buffer
+};
+
+// ---------------------------------------------------------------------------
 // Display Modes
 // ---------------------------------------------------------------------------
 enum class DisplayMode : uint8_t {
@@ -62,6 +70,7 @@ struct [[gnu::packed]] DisplayConfig {
 // Persistent key definition (stored in Flash)
 struct [[gnu::packed]] KeyConfig {
     ReportType report_type{ReportType::Keyboard};
+    BindingType binding_type{BindingType::Normal};
     uint16_t usage_code{0};
 };
 

@@ -14,22 +14,22 @@ const PersistentConfig ConfigManager::default_config_ = {
     .display_cfg = {.mode = DisplayMode::HwMonitor, .orientation = 0, .brightness = 80},
     .keys =
         {
-            {ReportType::Consumer, 0x00E9}, // Volume Increment
-            {ReportType::Consumer, 0x00EA}, // Volume Decrement
-            {ReportType::Consumer, 0x00CD}, // Play / Pause
-            {ReportType::Consumer, 0x00B5}, // Next Track
-            {ReportType::Consumer, 0x00B6}, // Previous Track
-            {ReportType::Keyboard, 0x28},   // Enter
-            {ReportType::Keyboard, 0x29},   // Escape
-            {ReportType::Keyboard, 0x2B},   // Tab
-            {ReportType::Keyboard, 0x2C},   // Space
-            {ReportType::Keyboard, 0x06},   // 'C'
-            {ReportType::Keyboard, 0x19},   // 'V'
-            {ReportType::Keyboard, 0x1D},   // 'Z'
-            {ReportType::Keyboard, 0x68},   // F13
-            {ReportType::Keyboard, 0x69},   // F14
-            {ReportType::Keyboard, 0x6A},   // F15
-            {ReportType::Keyboard, 0x6B},   // F16
+            {ReportType::Consumer, BindingType::Normal, 0x00E9}, // Volume Increment
+            {ReportType::Consumer, BindingType::Normal, 0x00EA}, // Volume Decrement
+            {ReportType::Consumer, BindingType::Normal, 0x00CD}, // Play / Pause
+            {ReportType::Consumer, BindingType::Normal, 0x00B5}, // Next Track
+            {ReportType::Consumer, BindingType::Normal, 0x00B6}, // Previous Track
+            {ReportType::Keyboard, BindingType::Normal, 0x28},   // Enter
+            {ReportType::Keyboard, BindingType::Normal, 0x29},   // Escape
+            {ReportType::Keyboard, BindingType::Normal, 0x2B},   // Tab
+            {ReportType::Keyboard, BindingType::Normal, 0x2C},   // Space
+            {ReportType::Keyboard, BindingType::Normal, 0x06},   // 'C'
+            {ReportType::Keyboard, BindingType::Normal, 0x19},   // 'V'
+            {ReportType::Keyboard, BindingType::Normal, 0x1D},   // 'Z'
+            {ReportType::Keyboard, BindingType::Normal, 0x68},   // F13
+            {ReportType::Keyboard, BindingType::Normal, 0x69},   // F14
+            {ReportType::Keyboard, BindingType::Normal, 0x6A},   // F15
+            {ReportType::Keyboard, BindingType::Normal, 0x6B},   // F16
         },
     .checksum = 0};
 
@@ -94,66 +94,71 @@ void ConfigManager::handle_packet(std::span<const uint8_t> buffer) {
     if (cmd_byte < NumMacroKeys) {
         keys_[cmd_byte].config.report_type = static_cast<ReportType>(buffer[1]);
         keys_[cmd_byte].config.usage_code = static_cast<uint16_t>(buffer[2] | (buffer[3] << 8));
+        if (buffer.size() >= 5) {
+            keys_[cmd_byte].config.binding_type = static_cast<BindingType>(buffer[4]);
+        } else {
+            keys_[cmd_byte].config.binding_type = BindingType::Normal;
+        }
     }
 }
 
 namespace {
 
 constexpr std::array<KeyConfig, NumMacroKeys> NumpadPreset = {{
-    {ReportType::Keyboard, 0x5F}, // KP 7
-    {ReportType::Keyboard, 0x60}, // KP 8
-    {ReportType::Keyboard, 0x61}, // KP 9
-    {ReportType::Keyboard, 0x54}, // KP /
-    {ReportType::Keyboard, 0x5C}, // KP 4
-    {ReportType::Keyboard, 0x5D}, // KP 5
-    {ReportType::Keyboard, 0x5E}, // KP 6
-    {ReportType::Keyboard, 0x55}, // KP *
-    {ReportType::Keyboard, 0x59}, // KP 1
-    {ReportType::Keyboard, 0x5A}, // KP 2
-    {ReportType::Keyboard, 0x5B}, // KP 3
-    {ReportType::Keyboard, 0x56}, // KP -
-    {ReportType::Keyboard, 0x62}, // KP 0
-    {ReportType::Keyboard, 0x63}, // KP .
-    {ReportType::Keyboard, 0x58}, // KP Enter
-    {ReportType::Keyboard, 0x57}, // KP +
+    {ReportType::Keyboard, BindingType::Normal, 0x5F}, // KP 7
+    {ReportType::Keyboard, BindingType::Normal, 0x60}, // KP 8
+    {ReportType::Keyboard, BindingType::Normal, 0x61}, // KP 9
+    {ReportType::Keyboard, BindingType::Normal, 0x54}, // KP /
+    {ReportType::Keyboard, BindingType::Normal, 0x5C}, // KP 4
+    {ReportType::Keyboard, BindingType::Normal, 0x5D}, // KP 5
+    {ReportType::Keyboard, BindingType::Normal, 0x5E}, // KP 6
+    {ReportType::Keyboard, BindingType::Normal, 0x55}, // KP *
+    {ReportType::Keyboard, BindingType::Normal, 0x59}, // KP 1
+    {ReportType::Keyboard, BindingType::Normal, 0x5A}, // KP 2
+    {ReportType::Keyboard, BindingType::Normal, 0x5B}, // KP 3
+    {ReportType::Keyboard, BindingType::Normal, 0x56}, // KP -
+    {ReportType::Keyboard, BindingType::Normal, 0x62}, // KP 0
+    {ReportType::Keyboard, BindingType::Normal, 0x63}, // KP .
+    {ReportType::Keyboard, BindingType::Normal, 0x58}, // KP Enter
+    {ReportType::Keyboard, BindingType::Normal, 0x57}, // KP +
 }};
 
 constexpr std::array<KeyConfig, NumMacroKeys> MediaPreset = {{
-    {ReportType::Consumer, 0x00E2}, // Mute
-    {ReportType::Consumer, 0x00EA}, // Vol Down
-    {ReportType::Consumer, 0x00E9}, // Vol Up
-    {ReportType::Consumer, 0x00CD}, // Play / Pause
-    {ReportType::Consumer, 0x00B6}, // Prev Track
-    {ReportType::Consumer, 0x00B5}, // Next Track
-    {ReportType::Consumer, 0x00B7}, // Stop
-    {ReportType::Consumer, 0x00B3}, // Fast Forward
-    {ReportType::Consumer, 0x00B4}, // Rewind
-    {ReportType::Consumer, 0x0192}, // Calculator
-    {ReportType::Consumer, 0x0194}, // File Browser
-    {ReportType::Consumer, 0x0223}, // Home
-    {ReportType::Consumer, 0x0070}, // Brightness Down
-    {ReportType::Consumer, 0x006F}, // Brightness Up
-    {ReportType::Consumer, 0x0032}, // Sleep
-    {ReportType::Consumer, 0x00B8}, // Eject
+    {ReportType::Consumer, BindingType::Normal, 0x00E2}, // Mute
+    {ReportType::Consumer, BindingType::Normal, 0x00EA}, // Vol Down
+    {ReportType::Consumer, BindingType::Normal, 0x00E9}, // Vol Up
+    {ReportType::Consumer, BindingType::Normal, 0x00CD}, // Play / Pause
+    {ReportType::Consumer, BindingType::Normal, 0x00B6}, // Prev Track
+    {ReportType::Consumer, BindingType::Normal, 0x00B5}, // Next Track
+    {ReportType::Consumer, BindingType::Normal, 0x00B7}, // Stop
+    {ReportType::Consumer, BindingType::Normal, 0x00B3}, // Fast Forward
+    {ReportType::Consumer, BindingType::Normal, 0x00B4}, // Rewind
+    {ReportType::Consumer, BindingType::Normal, 0x0192}, // Calculator
+    {ReportType::Consumer, BindingType::Normal, 0x0194}, // File Browser
+    {ReportType::Consumer, BindingType::Normal, 0x0223}, // Home
+    {ReportType::Consumer, BindingType::Normal, 0x0070}, // Brightness Down
+    {ReportType::Consumer, BindingType::Normal, 0x006F}, // Brightness Up
+    {ReportType::Consumer, BindingType::Normal, 0x0032}, // Sleep
+    {ReportType::Consumer, BindingType::Normal, 0x00B8}, // Eject
 }};
 
 constexpr std::array<KeyConfig, NumMacroKeys> NavPreset = {{
-    {ReportType::Keyboard, 0x29}, // Escape
-    {ReportType::Keyboard, 0x4A}, // Home
-    {ReportType::Keyboard, 0x52}, // Up Arrow
-    {ReportType::Keyboard, 0x4B}, // Page Up
-    {ReportType::Keyboard, 0x2B}, // Tab
-    {ReportType::Keyboard, 0x50}, // Left Arrow
-    {ReportType::Keyboard, 0x51}, // Down Arrow
-    {ReportType::Keyboard, 0x4F}, // Right Arrow
-    {ReportType::Keyboard, 0x2A}, // Backspace
-    {ReportType::Keyboard, 0x4D}, // End
-    {ReportType::Keyboard, 0x28}, // Enter
-    {ReportType::Keyboard, 0x4E}, // Page Down
-    {ReportType::Keyboard, 0x68}, // F13
-    {ReportType::Keyboard, 0x69}, // F14
-    {ReportType::Keyboard, 0x6A}, // F15
-    {ReportType::Keyboard, 0x4C}, // Delete
+    {ReportType::Keyboard, BindingType::Normal, 0x29}, // Escape
+    {ReportType::Keyboard, BindingType::Normal, 0x4A}, // Home
+    {ReportType::Keyboard, BindingType::Normal, 0x52}, // Up Arrow
+    {ReportType::Keyboard, BindingType::Normal, 0x4B}, // Page Up
+    {ReportType::Keyboard, BindingType::Normal, 0x2B}, // Tab
+    {ReportType::Keyboard, BindingType::Normal, 0x50}, // Left Arrow
+    {ReportType::Keyboard, BindingType::Normal, 0x51}, // Down Arrow
+    {ReportType::Keyboard, BindingType::Normal, 0x4F}, // Right Arrow
+    {ReportType::Keyboard, BindingType::Normal, 0x2A}, // Backspace
+    {ReportType::Keyboard, BindingType::Normal, 0x4D}, // End
+    {ReportType::Keyboard, BindingType::Normal, 0x28}, // Enter
+    {ReportType::Keyboard, BindingType::Normal, 0x4E}, // Page Down
+    {ReportType::Keyboard, BindingType::Normal, 0x68}, // F13
+    {ReportType::Keyboard, BindingType::Normal, 0x69}, // F14
+    {ReportType::Keyboard, BindingType::Normal, 0x6A}, // F15
+    {ReportType::Keyboard, BindingType::Normal, 0x4C}, // Delete
 }};
 
 } // namespace

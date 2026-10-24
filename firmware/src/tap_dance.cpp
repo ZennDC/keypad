@@ -174,24 +174,48 @@ void TapDanceEngine::trigger_gesture(uint8_t key_idx, Gesture gesture, uint32_t 
     }
 }
 
-void TapDanceEngine::update(uint32_t now_ms, const bsp::Keyboard& keyboard) {
-    // 1. Expire completed tap pulses
+void TapDanceEngine::update_pulses(uint32_t now_ms) {
     for (size_t i = 0; i < KeyCount; ++i) {
         if (active_pulses_[i].active && now_ms >= active_pulses_[i].expire_time_ms) {
             active_pulses_[i].active = false;
             hid_state_changed_ = true;
         }
     }
+}
+
+void TapDanceEngine::update_key(size_t key_idx, uint32_t now_ms, bool is_down) {
+    if (key_idx >= KeyCount)
+        return;
+
+    Gesture g = trackers_[key_idx].update(now_ms, is_down, config_);
+    if (g != Gesture::None) {
+        trigger_gesture(static_cast<uint8_t>(key_idx), g, now_ms);
+    }
+}
+
+void TapDanceEngine::reset_key(size_t key_idx) {
+    if (key_idx >= KeyCount)
+        return;
+
+    trackers_[key_idx].reset();
+    if (active_holds_[key_idx].is_valid()) {
+        active_holds_[key_idx] = {};
+        hid_state_changed_ = true;
+    }
+    if (active_pulses_[key_idx].active) {
+        active_pulses_[key_idx].active = false;
+        hid_state_changed_ = true;
+    }
+}
+
+void TapDanceEngine::update(uint32_t now_ms, const bsp::Keyboard& keyboard) {
+    // 1. Expire completed tap pulses
+    update_pulses(now_ms);
 
     // 2. Advance state machines for all physical keys
     for (size_t i = 0; i < KeyCount; ++i) {
         auto key = static_cast<bsp::Key>(i);
-        bool is_down = keyboard.is_down(key);
-
-        Gesture g = trackers_[i].update(now_ms, is_down, config_);
-        if (g != Gesture::None) {
-            trigger_gesture(static_cast<uint8_t>(i), g, now_ms);
-        }
+        update_key(i, now_ms, keyboard.is_down(key));
     }
 }
 
