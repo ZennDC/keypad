@@ -24,6 +24,11 @@ ApplicationWindow {
     function getActionIcon(name) {
         if (!name) return "";
         const iconMap = {
+            "0x0000":         "qrc:/qt/qml/Configurator/assets/icons/square-dashed-plus.svg",
+            "0x0":            "qrc:/qt/qml/Configurator/assets/icons/square-dashed-plus.svg",
+            "None":           "qrc:/qt/qml/Configurator/assets/icons/square-dashed-plus.svg",
+            "Disabled":       "qrc:/qt/qml/Configurator/assets/icons/square-dashed-plus.svg",
+            "No Action":      "qrc:/qt/qml/Configurator/assets/icons/square-dashed-plus.svg",
             "Mute":           "qrc:/qt/qml/Configurator/assets/icons/volume-x.svg",
             "Mute Volume":    "qrc:/qt/qml/Configurator/assets/icons/volume-x.svg",
             "Vol +":          "qrc:/qt/qml/Configurator/assets/icons/volume-2.svg",
@@ -38,6 +43,87 @@ ApplicationWindow {
             "Previous Track": "qrc:/qt/qml/Configurator/assets/icons/rewind.svg"
         };
         return iconMap[name] || "";
+    }
+
+    // Synchronizes the actionSelect ComboBox with the currently selected switch's action
+    function syncActionSelect() {
+        if (!actionSelect || !actionSelect.model || selectedKeyIndex < 0 || !Backend.keyLabels || selectedKeyIndex >= Backend.keyLabels.length) {
+            return;
+        }
+
+        const currentLabel = Backend.keyLabels[selectedKeyIndex];
+        if (!currentLabel) return;
+
+        const labelToCode = {
+            "None":           0x0000,
+            "0x0000":         0x0000,
+            "0x0":            0x0000,
+            "Disabled":       0x0000,
+            "No Action":      0x0000,
+            "Mute":           0x00E2,
+            "Mute Volume":    0x00E2,
+            "Vol +":          0x00E9,
+            "Volume Up":      0x00E9,
+            "Vol -":          0x00EA,
+            "Volume Down":    0x00EA,
+            "Play/Pause":     0x00CD,
+            "Play / Pause":   0x00CD,
+            "Next":           0x00B5,
+            "Next Track":     0x00B5,
+            "Prev":           0x00B6,
+            "Previous Track": 0x00B6,
+            "Enter":          0x28,
+            "Escape":         0x29,
+            "Tab":            0x2B,
+            "Space":          0x2C,
+            "C":              0x06,
+            "V":              0x19,
+            "Z":              0x1D,
+            "F13":            0x68,
+            "F14":            0x69,
+            "F15":            0x6A,
+            "F16":            0x6B
+        };
+
+        let targetCode = labelToCode[currentLabel];
+        if (targetCode === undefined && (currentLabel.startsWith("0x") || currentLabel.startsWith("0X"))) {
+            targetCode = parseInt(currentLabel, 16);
+        }
+
+        for (let i = 0; i < actionSelect.model.length; ++i) {
+            const item = actionSelect.model[i];
+
+            if (targetCode !== undefined && item.code === targetCode) {
+                actionSelect.currentIndex = i;
+                return;
+            }
+
+            if (item.label === currentLabel ||
+                item.label === ("Key: " + currentLabel) ||
+                item.label.toLowerCase() === currentLabel.toLowerCase() ||
+                item.label.endsWith(currentLabel) ||
+                item.label.includes(currentLabel)) {
+                actionSelect.currentIndex = i;
+                return;
+            }
+        }
+
+        actionSelect.currentIndex = 0;
+    }
+
+    onSelectedKeyIndexChanged: {
+        syncActionSelect();
+    }
+
+    Connections {
+        target: Backend
+        function onKeyLabelsChanged() {
+            root.syncActionSelect();
+        }
+    }
+
+    Component.onCompleted: {
+        syncActionSelect();
     }
 
     ScrollView {
@@ -171,7 +257,6 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 spacing: 20
 
-                // Cascades input disabling and visually dims when disconnected
                 enabled: Backend.connected
                 opacity: Backend.connected ? 1.0 : 0.35
 
@@ -267,6 +352,7 @@ ApplicationWindow {
                                     readonly property bool isSelected: root.selectedKeyIndex === gridKey.index
                                     readonly property string actionName: (Backend.keyLabels && Backend.keyLabels.length > gridKey.index) ? Backend.keyLabels[gridKey.index] : "..."
                                     readonly property string actionIcon: root.getActionIcon(gridKey.actionName)
+                                    readonly property bool isUnassigned: gridKey.actionName === "None" || gridKey.actionName === "0x0000" || gridKey.actionName === "Disabled"
 
                                     color: isSelected ? "#1F6FEB" : ((keyArea.containsMouse && Backend.connected) ? "#21262D" : "#161B22")
                                     border.color: isSelected ? "#58A6FF" : "#30363D"
@@ -282,7 +368,6 @@ ApplicationWindow {
                                         anchors.centerIn: parent
                                         spacing: 3
 
-                                        // Icon if available
                                         Image {
                                             visible: gridKey.actionIcon !== ""
                                             source: gridKey.actionIcon
@@ -292,9 +377,9 @@ ApplicationWindow {
                                             Layout.preferredHeight: visible ? 18 : 0
                                             Layout.alignment: Qt.AlignHCenter
                                             fillMode: Image.PreserveAspectFit
+                                            opacity: gridKey.isUnassigned ? 0.35 : 1.0
                                         }
 
-                                        // Text Action (White, shown when no icon exists)
                                         Text {
                                             visible: gridKey.actionIcon === ""
                                             Layout.alignment: Qt.AlignHCenter
@@ -307,7 +392,6 @@ ApplicationWindow {
                                             horizontalAlignment: Text.AlignHCenter
                                         }
 
-                                        // Switch Hardware Identifier (Grey)
                                         Text {
                                             Layout.alignment: Qt.AlignHCenter
                                             text: "SW " + (gridKey.index + 1)
@@ -321,7 +405,10 @@ ApplicationWindow {
                                         anchors.fill: parent
                                         hoverEnabled: true
                                         cursorShape: Backend.connected ? Qt.PointingHandCursor : Qt.ArrowCursor
-                                        onClicked: root.selectedKeyIndex = gridKey.index
+                                        onClicked: {
+                                            root.selectedKeyIndex = gridKey.index;
+                                            root.syncActionSelect();
+                                        }
                                     }
                                 }
                             }
@@ -363,11 +450,18 @@ ApplicationWindow {
                             Layout.fillWidth: true
                             textRole: "label"
                             valueRole: "code"
+                            displayText: actionSelect.model[actionSelect.currentIndex]?.label || ""
 
                             leftPadding: 16
                             rightPadding: 40
 
                             model: [
+                                {
+                                    label: "No Action (Disabled)",
+                                    icon: "qrc:/qt/qml/Configurator/assets/icons/square-dashed-plus.svg",
+                                    type: 0x00,
+                                    code: 0x0000
+                                },
                                 {
                                     label: "Mute Volume",
                                     icon: "qrc:/qt/qml/Configurator/assets/icons/volume-x.svg",
@@ -461,7 +555,6 @@ ApplicationWindow {
                                 }
                             ]
 
-                            // Selected item layout
                             contentItem: Item {
                                 implicitHeight: 24
 
@@ -492,7 +585,6 @@ ApplicationWindow {
                                 }
                             }
 
-                            // Dropdown item layout
                             delegate: ItemDelegate {
                                 id: itemDel
                                 required property var modelData

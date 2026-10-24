@@ -57,8 +57,9 @@ static void process_keyboard_events(bsp::Board& board) {
     MacroKey* keys = cfg_mgr.keys_data();
 
     bool state_changed = false;
+    bool consumer_released = false;
 
-    // 1. Process display visual updates for ALL keys without breaking early
+    // 1. Process visual and debounce updates for ALL keys
     for (uint8_t i = 0; i < NumMacroKeys; ++i) {
         auto key_id = static_cast<bsp::Key>(i);
 
@@ -70,13 +71,15 @@ static void process_keyboard_events(bsp::Board& board) {
             keys[i].was_pressed = false;
             draw_key_slot(board.display, i, false);
             state_changed = true;
+            if (keys[i].config.report_type == ReportType::Consumer) {
+                consumer_released = true;
+            }
         }
     }
 
-    // If nothing transitioned or TinyUSB endpoint is busy, return
     if (!state_changed || !tud_hid_ready()) return;
 
-    // 2. Dispatch USB HID reports
+    // 2. Scan active keys
     uint8_t keycodes[6] = {0};
     uint8_t keycode_idx = 0;
     uint16_t consumer_code = 0;
@@ -96,12 +99,20 @@ static void process_keyboard_events(bsp::Board& board) {
         }
     }
 
-    // Send Consumer report if applicable
+    // 3. Dispatch Consumer Report
     if (has_consumer) {
         tud_hid_report(static_cast<uint8_t>(ReportId::ConsumerControl),
                        &consumer_code, sizeof(consumer_code));
-    } else {
-        // Send keyboard report with all currently pressed keys (or all 0s if released)
+    } else if (consumer_released) {
+        // Send release (0) report so the OS stops repeating the media key!
+        uint16_t empty = 0;
+        tud_hid_report(static_cast<uint8_t>(ReportId::ConsumerControl),
+                       &empty, sizeof(empty));
+    }
+
+    // 4. Dispatch Keyboard Report
+    // (Only send if keyboard keys are held or if keys transitioned)
+    if (keycode_idx > 0 || !has_consumer) {
         tud_hid_keyboard_report(static_cast<uint8_t>(ReportId::Keyboard), 0, keycodes);
     }
 }

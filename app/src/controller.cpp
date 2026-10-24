@@ -1,34 +1,67 @@
-#include "controller.h"
-#include "protocol.h"
+#include "controller.hpp"
 #include <hidapi/hidapi.h>
 #include <QDebug>
 #include <array>
 
-static constexpr uint16_t VID = 0xCafe;
-static constexpr uint16_t PID = 0x4000;
-static constexpr uint8_t  CONFIG_REPORT_ID = REPORT_ID_CONFIG_FEATURE; // 3
+using namespace zdc::protocol;
+
+namespace {
+constexpr uint8_t ConfigReportId = static_cast<uint8_t>(ReportId::ConfigFeature);
+}
 
 DeviceController::DeviceController(QObject *parent) : QObject(parent) {
     hid_init();
-    for (int i = 0; i < NUM_MACRO_KEYS; ++i) {
+    m_keyLabels.reserve(NumMacroKeys);
+    for (size_t i = 0; i < NumMacroKeys; ++i) {
         m_keyLabels.append(QStringLiteral("None"));
     }
+
+    // Check device presence every 1000ms
+    connect(&m_pollTimer, &QTimer::timeout, this, &DeviceController::pollConnection);
+    m_pollTimer.start(1000);
 }
 
 DeviceController::~DeviceController() {
+    m_pollTimer.stop();
     disconnectDevice();
     hid_exit();
 }
 
 void DeviceController::updateStatus(const QString &text) {
-    m_statusText = text;
-    emit statusChanged();
+    if (m_statusText != text) {
+        m_statusText = text;
+        emit statusChanged();
+    }
 }
 
-QString DeviceController::lookupActionLabel(uint8_t type, uint16_t code) {
-    if (type == 0x00) return QStringLiteral("Disabled");
+void DeviceController::handleDeviceError(const QString &context) {
+    qWarning() << "HID Device Error during:" << context;
+    disconnectDevice();
+    updateStatus(QStringLiteral("Device disconnected"));
+}
 
-    if (type == 0x02) { // Consumer
+void DeviceController::pollConnection() {
+    if (!m_device) {
+        // Automatically attempt to reconnect if not connected
+        connectDevice();
+        return;
+    }
+
+    // Verify if the device still enumerates on the host bus
+    struct hid_device_info *devs = hid_enumerate(VID, PID);
+    if (!devs) {
+        handleDeviceError(QStringLiteral("device enumeration check"));
+        return;
+    }
+    hid_free_enumeration(devs);
+}
+
+QString DeviceController::lookupActionLabel(ReportType type, uint16_t code) {
+    if (code == 0x0000 || type == static_cast<ReportType>(0)) {
+        return QStringLiteral("None");
+    }
+
+    if (type == ReportType::Consumer) {
         switch (code) {
             case 0x00E2: return QStringLiteral("Mute");
             case 0x00E9: return QStringLiteral("Vol +");
@@ -38,7 +71,7 @@ QString DeviceController::lookupActionLabel(uint8_t type, uint16_t code) {
             case 0x00B6: return QStringLiteral("Prev");
             default: break;
         }
-    } else if (type == 0x01) { // Keyboard
+    } else if (type == ReportType::Keyboard) {
         switch (code) {
             case 0x28: return QStringLiteral("Enter");
             case 0x29: return QStringLiteral("Escape");
@@ -54,31 +87,28 @@ QString DeviceController::lookupActionLabel(uint8_t type, uint16_t code) {
             default: break;
         }
     }
-    return QString("0x%1").arg(code, 4, 16, QChar('0')).toUpper();
+    return QStringLiteral("0x%1").arg(code, 4, 16, QChar('0')).toUpper();
 }
 
 bool DeviceController::fetchDeviceConfig() {
     if (!m_device) return false;
 
-    // Buffer: Report ID prefix + 63 bytes payload
-    std::array<uint8_t, CONFIG_REPORT_SIZE> raw{};
-    raw[0] = CONFIG_REPORT_ID;
+    std::array<uint8_t, ConfigReportSize> raw{};
+    raw[0] = ConfigReportId;
 
     int res = hid_get_feature_report(m_device, raw.data(), raw.size());
     if (res < 0) {
-        const wchar_t *err = hid_error(m_device);
-        qWarning() << "HID fetch error:" << QString::fromWCharArray(err ? err : L"unknown");
+        handleDeviceError(QStringLiteral("fetchDeviceConfig"));
         return false;
     }
 
-    // Determine payload start depending on whether hidapi returned report_id at raw[0]
-    const uint8_t *data = (raw[0] == CONFIG_REPORT_ID) ? &raw[1] : &raw[0];
+    const uint8_t *data = (raw[0] == ConfigReportId) ? &raw[1] : &raw[0];
 
-    // 1. Parse 16 Keys (Bytes 0 - 47)
+    // 1. Parse 16 Keys (3 bytes: type, usage_low, usage_high)
     m_keyLabels.clear();
-    int offset = 0;
-    for (int i = 0; i < NUM_MACRO_KEYS; ++i) {
-        uint8_t type = data[offset];
+    size_t offset = 0;
+    for (size_t i = 0; i < NumMacroKeys; ++i) {
+        auto type = static_cast<ReportType>(data[offset]);
         uint16_t usage = static_cast<uint16_t>(data[offset + 1]) | 
                          (static_cast<uint16_t>(data[offset + 2]) << 8);
         offset += 3;
@@ -86,13 +116,13 @@ bool DeviceController::fetchDeviceConfig() {
     }
     emit keyLabelsChanged();
 
-    // 2. Parse Display Settings (Bytes 48 - 50)
+    // 2. Parse Display Settings
     m_displayMode = data[offset];
     m_displayOrientation = data[offset + 1];
     m_displayBrightness = data[offset + 2];
     emit displayConfigLoaded();
 
-    updateStatus(QStringLiteral("Connected to Keypad (Config Synced)"));
+    updateStatus(QStringLiteral("Connected to Keypad"));
     return true;
 }
 
@@ -101,9 +131,12 @@ bool DeviceController::connectDevice() {
 
     m_device = hid_open(VID, PID, nullptr);
     if (!m_device) {
-        updateStatus(QStringLiteral("Device not found"));
+        updateStatus(QStringLiteral("Disconnected"));
         return false;
     }
+
+    // Set non-blocking mode so read calls never freeze Qt UI
+    hid_set_nonblocking(m_device, 1);
 
     emit connectionChanged();
     fetchDeviceConfig();
@@ -120,22 +153,24 @@ void DeviceController::disconnectDevice() {
 }
 
 bool DeviceController::sendKeyConfig(int keyIndex, int reportType, int usageCode) {
-    if (!m_device || keyIndex < 0 || keyIndex >= NUM_MACRO_KEYS) return false;
+    if (!m_device || keyIndex < 0 || static_cast<size_t>(keyIndex) >= NumMacroKeys) {
+        return false;
+    }
 
-    uint8_t reportBuf[CONFIG_REPORT_SIZE] = {0};
-    reportBuf[0] = CONFIG_REPORT_ID;
+    std::array<uint8_t, ConfigReportSize> reportBuf{};
+    reportBuf[0] = ConfigReportId;
     reportBuf[1] = static_cast<uint8_t>(keyIndex);
     reportBuf[2] = static_cast<uint8_t>(reportType);
     reportBuf[3] = static_cast<uint8_t>(usageCode & 0xFF);
     reportBuf[4] = static_cast<uint8_t>((usageCode >> 8) & 0xFF);
 
-    if (hid_send_feature_report(m_device, reportBuf, sizeof(reportBuf)) < 0) {
+    if (hid_send_feature_report(m_device, reportBuf.data(), reportBuf.size()) < 0) {
+        handleDeviceError(QStringLiteral("sendKeyConfig"));
         return false;
     }
 
-    // Update local label immediately
     if (keyIndex < m_keyLabels.size()) {
-        m_keyLabels[keyIndex] = lookupActionLabel(reportType, usageCode);
+        m_keyLabels[keyIndex] = lookupActionLabel(static_cast<ReportType>(reportType), static_cast<uint16_t>(usageCode));
         emit keyLabelsChanged();
     }
     return true;
@@ -144,22 +179,43 @@ bool DeviceController::sendKeyConfig(int keyIndex, int reportType, int usageCode
 bool DeviceController::sendDisplayConfig(int mode, int orientation, int brightness) {
     if (!m_device) return false;
 
-    uint8_t reportBuf[CONFIG_REPORT_SIZE] = {0};
-    reportBuf[0] = CONFIG_REPORT_ID;
-    reportBuf[1] = CMD_CONFIG_TARGET_DISPLAY;
+    std::array<uint8_t, ConfigReportSize> reportBuf{};
+    reportBuf[0] = ConfigReportId;
+    reportBuf[1] = static_cast<uint8_t>(Command::ConfigTargetDisplay);
     reportBuf[2] = static_cast<uint8_t>(mode);
     reportBuf[3] = static_cast<uint8_t>(orientation);
     reportBuf[4] = static_cast<uint8_t>(brightness);
 
-    return hid_send_feature_report(m_device, reportBuf, sizeof(reportBuf)) >= 0;
+    if (hid_send_feature_report(m_device, reportBuf.data(), reportBuf.size()) < 0) {
+        handleDeviceError(QStringLiteral("sendDisplayConfig"));
+        return false;
+    }
+    return true;
 }
 
 bool DeviceController::saveToFlash() {
     if (!m_device) return false;
 
-    uint8_t reportBuf[CONFIG_REPORT_SIZE] = {0};
-    reportBuf[0] = CONFIG_REPORT_ID;
-    reportBuf[1] = CMD_SAVE_TO_FLASH;
+    std::array<uint8_t, ConfigReportSize> reportBuf{};
+    reportBuf[0] = ConfigReportId;
+    reportBuf[1] = static_cast<uint8_t>(Command::SaveToFlash);
 
-    return hid_send_feature_report(m_device, reportBuf, sizeof(reportBuf)) >= 0;
+    if (hid_send_feature_report(m_device, reportBuf.data(), reportBuf.size()) < 0) {
+        handleDeviceError(QStringLiteral("saveToFlash"));
+        return false;
+    }
+    return true;
+}
+
+bool DeviceController::rebootBootloader() {
+    if (!m_device) return false;
+
+    std::array<uint8_t, ConfigReportSize> reportBuf{};
+    reportBuf[0] = ConfigReportId;
+    reportBuf[1] = static_cast<uint8_t>(Command::Bootloader);
+
+    hid_send_feature_report(m_device, reportBuf.data(), reportBuf.size());
+    disconnectDevice();
+    updateStatus(QStringLiteral("Rebooted to BOOTSEL"));
+    return true;
 }

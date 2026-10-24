@@ -27,7 +27,7 @@ qt_add_qml_module(app
     URI Configurator
     VERSION 1.0
     SOURCES
-        include/controller.h
+        include/controller.hpp
         src/controller.cpp
     QML_FILES
         src/Main.qml
@@ -38,12 +38,12 @@ qt_add_qml_module(app
         assets/icons/volume-x.svg
         assets/icons/fast-forward.svg
         assets/icons/rewind.svg
+        assets/icons/square-dashed-plus.svg
 )
 
-# Header search paths (Local includes + Root shared protocol)
 target_include_directories(app PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../firmware/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../shared/include
 )
 
 # Link Qt and HIDAPI libraries
