@@ -27,7 +27,7 @@ class DeviceController : public QObject {
     Q_PROPERTY(int displayBrightness READ displayBrightness NOTIFY displayConfigLoaded)
 
 public:
-    explicit DeviceController(QObject *parent = nullptr);
+    explicit DeviceController(QObject* parent = nullptr);
 
     [[nodiscard]] bool isConnected() const noexcept { return m_transport->isConnected(); }
     [[nodiscard]] QString statusText() const { return m_statusText; }
@@ -56,10 +56,10 @@ signals:
     void displayConfigLoaded();
 
 private:
-    void updateStatus(const QString &text);
+    void updateStatus(const QString& text);
 
     std::unique_ptr<HidTransport> m_transport;
-    KeyModel *m_keyModel = nullptr;
+    KeyModel* m_keyModel = nullptr;
 
     QString m_statusText = QStringLiteral("Disconnected");
     int m_displayMode = 0;

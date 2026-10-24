@@ -1,8 +1,8 @@
 #include "bsp/display.hpp"
 #include "bsp/board_config.hpp"
 #include "bsp/font5x8.hpp"
-#include "hardware/pwm.h"
 #include "hardware/gpio.h"
+#include "hardware/pwm.h"
 #include "hardware/spi.h"
 #include "pico/stdlib.h"
 
@@ -100,30 +100,40 @@ void Display::init() {
 }
 
 void Display::set_backlight(uint8_t percent) {
-    if (percent > 100) percent = 100;
+    if (percent > 100)
+        percent = 100;
     // TFT_BL_PIN is GP22
     uint slice_num = pwm_gpio_to_slice_num(22);
     pwm_set_chan_level(slice_num, pwm_gpio_to_channel(22), (percent * 255) / 100);
 }
 
 void Display::fill_rect(int16_t x, int16_t y, uint16_t w, uint16_t h, graphics::Color color) {
-    if (x >= width || y >= height || x + w <= 0 || y + h <= 0) return;
+    if (x >= width || y >= height || x + w <= 0 || y + h <= 0)
+        return;
 
-    if (x < 0) { w += x; x = 0; }
-    if (y < 0) { h += y; y = 0; }
-    if (x + w > width)  w = width - x;
-    if (y + h > height) h = height - y;
+    if (x < 0) {
+        w += x;
+        x = 0;
+    }
+    if (y < 0) {
+        h += y;
+        y = 0;
+    }
+    if (x + w > width)
+        w = width - x;
+    if (y + h > height)
+        h = height - y;
 
     set_window(x, y, x + w - 1, y + h - 1);
 
     // Vul een kleine buffer met Big-Endian pixeldata
     uint8_t hi = static_cast<uint8_t>(color.value >> 8);
     uint8_t lo = static_cast<uint8_t>(color.value & 0xFF);
-    
+
     constexpr size_t chunk_pixels = 32;
     uint8_t buffer[chunk_pixels * 2];
     for (size_t i = 0; i < chunk_pixels; ++i) {
-        buffer[i * 2]     = hi;
+        buffer[i * 2] = hi;
         buffer[i * 2 + 1] = lo;
     }
 
@@ -145,14 +155,15 @@ void Display::clear(graphics::Color color) {
 }
 
 void Display::draw_bitmap(int16_t x, int16_t y, uint16_t w, uint16_t h, const uint16_t* pixels) {
-    if (x >= width || y >= height || pixels == nullptr) return;
+    if (x >= width || y >= height || pixels == nullptr)
+        return;
 
     set_window(x, y, x + w - 1, y + h - 1);
 
     // Stream de pixelbuffer direct naar het scherm
     gpio_put(dc_pin, 1);
     cs_select();
-    
+
     // Pixeldata moet in Big-Endian gestuurd worden
     // Als de bron al BE is, kan het in één write; anders per chunk swappen:
     constexpr size_t chunk_size = 64;
@@ -164,7 +175,7 @@ void Display::draw_bitmap(int16_t x, int16_t y, uint16_t w, uint16_t h, const ui
         size_t count = (total - offset > chunk_size) ? chunk_size : (total - offset);
         for (size_t i = 0; i < count; ++i) {
             uint16_t p = pixels[offset + i];
-            buffer[i * 2]     = static_cast<uint8_t>(p >> 8);
+            buffer[i * 2] = static_cast<uint8_t>(p >> 8);
             buffer[i * 2 + 1] = static_cast<uint8_t>(p & 0xFF);
         }
         spi_write_blocking(spi_inst, buffer, count * 2);
@@ -176,12 +187,14 @@ void Display::draw_bitmap(int16_t x, int16_t y, uint16_t w, uint16_t h, const ui
 
 void Display::draw_char(int16_t x, int16_t y, char c, graphics::Color fg, graphics::Color bg, uint8_t scale) {
     const auto* glyph = graphics::Font5x8::get_glyph(c);
-    if (!glyph) return;
+    if (!glyph)
+        return;
 
     uint16_t total_w = 6 * scale; // 5 kolommen + 1 spatiekolom
     uint16_t total_h = 8 * scale;
 
-    if (x + total_w <= 0 || x >= width || y + total_h <= 0 || y >= height) return;
+    if (x + total_w <= 0 || x >= width || y + total_h <= 0 || y >= height)
+        return;
 
     set_window(x, y, x + total_w - 1, y + total_h - 1);
 
@@ -217,7 +230,8 @@ void Display::draw_char(int16_t x, int16_t y, char c, graphics::Color fg, graphi
     cs_deselect();
 }
 
-void Display::draw_text(int16_t x, int16_t y, std::string_view text, graphics::Color fg, graphics::Color bg, uint8_t scale) {
+void Display::draw_text(int16_t x, int16_t y, std::string_view text, graphics::Color fg, graphics::Color bg,
+                        uint8_t scale) {
     int16_t cursor_x = x;
     for (char c : text) {
         draw_char(cursor_x, y, c, fg, bg, scale);

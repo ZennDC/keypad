@@ -9,28 +9,31 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#define TARGET_VID      0xCAFE
-#define TARGET_PID      0x4000
-#define REPORT_ID       3
-#define CMD_BOOTLOADER  0xBB
-#define REPORT_LEN      64
+#define TARGET_VID 0xCAFE
+#define TARGET_PID 0x4000
+#define REPORT_ID 3
+#define CMD_BOOTLOADER 0xBB
+#define REPORT_LEN 64
 
-static bool find_hidraw_device(char *out_path, size_t max_len) {
-    const char *base_path = "/sys/class/hidraw";
-    DIR *dir = opendir(base_path);
-    if (!dir) return false;
+static bool find_hidraw_device(char* out_path, size_t max_len) {
+    const char* base_path = "/sys/class/hidraw";
+    DIR* dir = opendir(base_path);
+    if (!dir)
+        return false;
 
-    struct dirent *entry;
+    struct dirent* entry;
     bool found = false;
 
     while ((entry = readdir(dir)) != NULL) {
-        if (strncmp(entry->d_name, "hidraw", 6) != 0) continue;
+        if (strncmp(entry->d_name, "hidraw", 6) != 0)
+            continue;
 
         char uevent_path[PATH_MAX];
         snprintf(uevent_path, sizeof(uevent_path), "%s/%s/device/uevent", base_path, entry->d_name);
 
-        FILE *f = fopen(uevent_path, "r");
-        if (!f) continue;
+        FILE* f = fopen(uevent_path, "r");
+        if (!f)
+            continue;
 
         char line[256];
         while (fgets(line, sizeof(line), f)) {
@@ -44,7 +47,8 @@ static bool find_hidraw_device(char *out_path, size_t max_len) {
             }
         }
         fclose(f);
-        if (found) break;
+        if (found)
+            break;
     }
 
     closedir(dir);

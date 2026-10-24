@@ -1,8 +1,8 @@
 #pragma once
 
-#include <stdint.h>
 #include <array>
 #include <cstddef>
+#include <stdint.h>
 
 namespace bsp::graphics {
 

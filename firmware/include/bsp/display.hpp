@@ -1,8 +1,8 @@
 #pragma once
 
+#include "bsp/color.hpp"
 #include <stdint.h>
 #include <string_view>
-#include "bsp/color.hpp"
 
 namespace bsp {
 
@@ -26,7 +26,7 @@ public:
     void draw_char(int16_t x, int16_t y, char c, graphics::Color fg, graphics::Color bg, uint8_t scale = 1);
 
     // Tekent een tekststring
-    void draw_text(int16_t x, int16_t y, std::string_view text, graphics::Color fg = graphics::Color::White, 
+    void draw_text(int16_t x, int16_t y, std::string_view text, graphics::Color fg = graphics::Color::White,
                    graphics::Color bg = graphics::Color::Black, uint8_t scale = 1);
 
     // Scherm aan/uit of helderheid aanpassen via PWM (0-100%)

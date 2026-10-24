@@ -1,0 +1,150 @@
+name: CI
+
+on:
+    push:
+        branches: [master, main]
+    pull_request:
+        branches: [master, main]
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    filter:
+        name: Detect Changed Components
+        runs-on: ubuntu-latest
+        outputs:
+            firmware: ${{ steps.changes.outputs.firmware }}
+            app: ${{ steps.changes.outputs.app }}
+        steps:
+            - uses: actions/checkout@v4
+            - uses: dorny/paths-filter@v3
+              id: changes
+              with:
+                  filters: |
+                      firmware:
+                        - 'firmware/**'
+                        - 'shared/**'
+                        - '.github/workflows/ci.yml'
+                      app:
+                        - 'app/**'
+                        - 'shared/**'
+                        - '.github/workflows/ci.yml'
+
+    code-quality:
+        name: Code Quality & Static Checks
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install Linting Tools
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y clang-format python3-pip
+                  pip install --upgrade ruff --break-system-packages
+
+            - name: Check C++ Formatting
+              run: |
+                  find firmware/src firmware/include app/src app/include shared/include \
+                    -name '*.cpp' -o -name '*.hpp' -o -name '*.c' -o -name '*.h' \
+                    | xargs clang-format --dry-run --Werror
+
+            - name: Lint Test Scripts
+              run: |
+                  ruff check firmware/tests/
+
+    build-firmware:
+        name: Build RP2040 Firmware
+        needs: filter
+        if: needs.filter.outputs.firmware == 'true'
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Keypad Repo
+              uses: actions/checkout@v4
+
+            - name: Install ARM GNU Toolchain & Ninja
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib ninja-build
+
+            - name: Cache Pico SDK
+              id: cache-pico-sdk
+              uses: actions/cache@v4
+              with:
+                  path: ${{ runner.temp }}/pico-sdk
+                  key: pico-sdk-2.3.1
+
+            - name: Setup Pico SDK
+              if: steps.cache-pico-sdk.outputs.cache-hit != 'true'
+              run: |
+                  git clone --depth 1 --branch 2.3.1 https://github.com/raspberrypi/pico-sdk.git ${{ runner.temp }}/pico-sdk
+                  cd ${{ runner.temp }}/pico-sdk
+                  git submodule update --init --depth 1 lib/tinyusb
+
+            - name: Configure CMake
+              env:
+                  PICO_SDK_PATH: ${{ runner.temp }}/pico-sdk
+              run: |
+                  cmake -B firmware/build -S firmware -G Ninja \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DBUILD_TESTS=ON
+
+            - name: Build Firmware
+              run: cmake --build firmware/build --parallel
+
+            - name: Memory Budget & Binary Analysis
+              run: |
+                  echo "### Firmware Memory Footprint" >> $GITHUB_STEP_SUMMARY
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  arm-none-eabi-size -B firmware/build/Keypad.elf >> $GITHUB_STEP_SUMMARY
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+
+            - name: Upload Firmware Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: keypad-firmware
+                  path: |
+                      firmware/build/Keypad.uf2
+                      firmware/build/Keypad.bin
+                      firmware/build/Keypad.elf
+                      firmware/build/test_bsp.uf2
+
+    build-app:
+        name: Build Desktop Configurator
+        needs: filter
+        if: needs.filter.outputs.app == 'true'
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Repo
+              uses: actions/checkout@v4
+
+            - name: Install Linux Build Dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y \
+                    libhidapi-dev \
+                    pkg-config \
+                    ninja-build \
+                    libgl1-mesa-dev \
+                    libxkbcommon-dev
+
+            - name: Install Qt 6.10
+              uses: jurplel/install-qt-action@v4
+              with:
+                  version: "6.10.*"
+                  cache: true
+
+            - name: Configure CMake
+              run: |
+                  cmake -B app/build -S app -G Ninja \
+                    -DCMAKE_BUILD_TYPE=Release
+
+            - name: Build Application
+              run: cmake --build app/build --parallel
+
+            - name: Upload Configurator Artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: keypad-configurator-linux
+                  path: app/build/app

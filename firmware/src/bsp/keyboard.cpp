@@ -80,18 +80,21 @@ void Keyboard::update() {
 }
 
 bool Keyboard::is_down(Key key) const {
-    if (key >= Key::Count) return false;
+    if (key >= Key::Count)
+        return false;
     return (current_state_ & (1UL << static_cast<uint8_t>(key))) != 0;
 }
 
 bool Keyboard::just_pressed(Key key) const {
-    if (key >= Key::Count) return false;
+    if (key >= Key::Count)
+        return false;
     uint32_t bit = (1UL << static_cast<uint8_t>(key));
     return (current_state_ & bit) && !(previous_state_ & bit);
 }
 
 bool Keyboard::just_released(Key key) const {
-    if (key >= Key::Count) return false;
+    if (key >= Key::Count)
+        return false;
     uint32_t bit = (1UL << static_cast<uint8_t>(key));
     return !(current_state_ & bit) && (previous_state_ & bit);
 }

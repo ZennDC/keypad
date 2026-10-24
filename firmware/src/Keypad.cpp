@@ -1,5 +1,5 @@
-#include "pico/stdlib.h"
 #include "bsp/board.h"
+#include "pico/stdlib.h"
 #include "tusb.h"
 
 #include "bsp/bsp.hpp"
@@ -14,12 +14,13 @@ namespace {
 
 constexpr int StartX = 70;
 constexpr int StartY = 70;
-constexpr int BtnW   = 40;
-constexpr int BtnH   = 36;
-constexpr int Gap    = 6;
+constexpr int BtnW = 40;
+constexpr int BtnH = 36;
+constexpr int Gap = 6;
 
 void draw_key_slot(bsp::Display& display, uint8_t key_idx, bool pressed) {
-    if (key_idx >= 16) return;
+    if (key_idx >= 16)
+        return;
 
     const int row = key_idx / 4;
     const int col = key_idx % 4;
@@ -77,7 +78,8 @@ static void process_keyboard_events(bsp::Board& board) {
         }
     }
 
-    if (!state_changed || !tud_hid_ready()) return;
+    if (!state_changed || !tud_hid_ready())
+        return;
 
     // 2. Scan active keys
     uint8_t keycodes[6] = {0};
@@ -101,13 +103,11 @@ static void process_keyboard_events(bsp::Board& board) {
 
     // 3. Dispatch Consumer Report
     if (has_consumer) {
-        tud_hid_report(static_cast<uint8_t>(ReportId::ConsumerControl),
-                       &consumer_code, sizeof(consumer_code));
+        tud_hid_report(static_cast<uint8_t>(ReportId::ConsumerControl), &consumer_code, sizeof(consumer_code));
     } else if (consumer_released) {
         // Send release (0) report so the OS stops repeating the media key!
         uint16_t empty = 0;
-        tud_hid_report(static_cast<uint8_t>(ReportId::ConsumerControl),
-                       &empty, sizeof(empty));
+        tud_hid_report(static_cast<uint8_t>(ReportId::ConsumerControl), &empty, sizeof(empty));
     }
 
     // 4. Dispatch Keyboard Report
@@ -129,9 +129,7 @@ int main(void) {
     // 2. Configure and initialize persistent settings
     auto& cfg = config::ConfigManager::instance();
 
-    cfg.set_on_brightness_changed([&board](uint8_t brightness) {
-        board.display.set_backlight(brightness);
-    });
+    cfg.set_on_brightness_changed([&board](uint8_t brightness) { board.display.set_backlight(brightness); });
 
     cfg.init();
 

@@ -21,11 +21,9 @@ public:
         keys.init();
     }
 
-    void update() {
-        keys.update();
-    }
+    void update() { keys.update(); }
 
-    Display  display;
+    Display display;
     Keyboard keys;
 
 private:

@@ -2,8 +2,8 @@
 
 #include <QAbstractListModel>
 #include <QtQml/qqmlregistration.h>
-#include <vector>
 #include <cstdint>
+#include <vector>
 
 struct KeyState {
     uint8_t reportType = 0;
@@ -27,16 +27,16 @@ public:
     };
     Q_ENUM(KeyRoles)
 
-    explicit KeyModel(size_t keyCount, QObject *parent = nullptr);
+    explicit KeyModel(size_t keyCount, QObject* parent = nullptr);
 
-    [[nodiscard]] int rowCount(const QModelIndex &parent = QModelIndex()) const override;
-    [[nodiscard]] QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    [[nodiscard]] int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+    [[nodiscard]] QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
     [[nodiscard]] QHash<int, QByteArray> roleNames() const override;
 
     Q_INVOKABLE [[nodiscard]] int actionIndex(int keyIndex) const;
 
     void updateKey(size_t index, uint8_t reportType, uint16_t usageCode);
-    void resetKeys(const std::vector<KeyState> &keys);
+    void resetKeys(const std::vector<KeyState>& keys);
     [[nodiscard]] const std::vector<KeyState>& keys() const noexcept { return m_keys; }
     [[nodiscard]] QStringList labels() const;
 

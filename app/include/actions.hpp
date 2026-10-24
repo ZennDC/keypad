@@ -15,11 +15,11 @@ struct ActionInfo {
 };
 
 namespace Actions {
-    const std::vector<ActionInfo>& catalog();
-    int findIndex(uint8_t reportType, uint16_t usageCode);
-    ActionInfo resolve(uint8_t reportType, uint16_t usageCode);
-    QVariantList toVariantList();
+const std::vector<ActionInfo>& catalog();
+int findIndex(uint8_t reportType, uint16_t usageCode);
+ActionInfo resolve(uint8_t reportType, uint16_t usageCode);
+QVariantList toVariantList();
 
-    const QStringList& displayModes();
-    const QStringList& displayOrientations();
-}
+const QStringList& displayModes();
+const QStringList& displayOrientations();
+} // namespace Actions

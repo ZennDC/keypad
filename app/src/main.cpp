@@ -1,9 +1,9 @@
+#include "device_controller.hpp"
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
-#include "device_controller.hpp"
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     QGuiApplication app(argc, argv);
 
     QQuickStyle::setStyle("Material");

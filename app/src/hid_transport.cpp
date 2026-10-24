@@ -1,9 +1,8 @@
 #include "hid_transport.hpp"
-#include <hidapi/hidapi.h>
 #include <QDebug>
+#include <hidapi/hidapi.h>
 
-HidTransport::HidTransport(uint16_t vid, uint16_t pid, QObject *parent)
-    : QObject(parent), m_vid(vid), m_pid(pid) {
+HidTransport::HidTransport(uint16_t vid, uint16_t pid, QObject* parent) : QObject(parent), m_vid(vid), m_pid(pid) {
     hid_init();
     connect(&m_pollTimer, &QTimer::timeout, this, &HidTransport::poll);
     m_pollTimer.start(1000);
@@ -17,7 +16,8 @@ HidTransport::~HidTransport() {
 
 bool HidTransport::openDevice() {
     m_userDisconnected = false;
-    if (m_device) return true;
+    if (m_device)
+        return true;
 
     m_device = hid_open(m_vid, m_pid, nullptr);
     if (!m_device) {
@@ -41,7 +41,8 @@ void HidTransport::closeDevice(bool userInitiated) {
 }
 
 bool HidTransport::sendFeatureReport(std::span<const uint8_t> buffer) {
-    if (!m_device || buffer.empty()) return false;
+    if (!m_device || buffer.empty())
+        return false;
 
     int res = hid_send_feature_report(m_device, buffer.data(), buffer.size());
     if (res < 0) {
@@ -52,7 +53,8 @@ bool HidTransport::sendFeatureReport(std::span<const uint8_t> buffer) {
 }
 
 bool HidTransport::getFeatureReport(std::span<uint8_t> buffer) {
-    if (!m_device || buffer.empty()) return false;
+    if (!m_device || buffer.empty())
+        return false;
 
     int res = hid_get_feature_report(m_device, buffer.data(), buffer.size());
     if (res < 0) {
@@ -70,7 +72,7 @@ void HidTransport::poll() {
         return;
     }
 
-    struct hid_device_info *devs = hid_enumerate(m_vid, m_pid);
+    struct hid_device_info* devs = hid_enumerate(m_vid, m_pid);
     if (!devs) {
         handleDeviceError(QStringLiteral("device enumeration check"));
         return;
@@ -78,7 +80,7 @@ void HidTransport::poll() {
     hid_free_enumeration(devs);
 }
 
-void HidTransport::handleDeviceError(const QString &context) {
+void HidTransport::handleDeviceError(const QString& context) {
     qWarning() << "HID Transport Error during:" << context;
     if (m_device) {
         hid_close(m_device);

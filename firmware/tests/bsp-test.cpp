@@ -1,22 +1,22 @@
-#include <cstdio>
 #include "bsp/bsp.hpp"
+#include <cstdio>
 
 // ---------------------------------------------------------------------------
 // 320x240 Full-Screen Layout Configuration
 // ---------------------------------------------------------------------------
-inline constexpr int16_t BTN_SIZE        = 48; // Square tile size for all buttons
+inline constexpr int16_t BTN_SIZE = 48; // Square tile size for all buttons
 
 // Side buttons (Left column)
-inline constexpr int16_t SIDE_BTN_X      = 20;
-inline constexpr int16_t SIDE1_TEXT_Y    = 34;
-inline constexpr int16_t SIDE1_BOX_Y     = 48;
-inline constexpr int16_t SIDE2_TEXT_Y    = 138;
-inline constexpr int16_t SIDE2_BOX_Y     = 152;
+inline constexpr int16_t SIDE_BTN_X = 20;
+inline constexpr int16_t SIDE1_TEXT_Y = 34;
+inline constexpr int16_t SIDE1_BOX_Y = 48;
+inline constexpr int16_t SIDE2_TEXT_Y = 138;
+inline constexpr int16_t SIDE2_BOX_Y = 152;
 
 // 4x4 Key Matrix (Right area: X = 96..300, Y = 28..232)
 inline constexpr int16_t MATRIX_ORIGIN_X = 96;
 inline constexpr int16_t MATRIX_ORIGIN_Y = 28;
-inline constexpr int16_t MATRIX_SPACING  = 52; // 48px box + 4px gap
+inline constexpr int16_t MATRIX_SPACING = 52; // 48px box + 4px gap
 
 static void draw_ui(bsp::Display& display) {
     display.clear(bsp::graphics::Color::Black);
@@ -25,11 +25,13 @@ static void draw_ui(bsp::Display& display) {
     display.draw_text(26, 6, "MACROPAD TEST", bsp::graphics::Color::White, bsp::graphics::Color::Black, 2);
 
     // Side Button 1 (Left)
-    display.draw_text(SIDE_BTN_X + 7, SIDE1_TEXT_Y, "SIDE 1", bsp::graphics::Color::White, bsp::graphics::Color::Black, 1);
+    display.draw_text(SIDE_BTN_X + 7, SIDE1_TEXT_Y, "SIDE 1", bsp::graphics::Color::White, bsp::graphics::Color::Black,
+                      1);
     display.fill_rect(SIDE_BTN_X, SIDE1_BOX_Y, BTN_SIZE, BTN_SIZE, bsp::graphics::Color::Gray);
 
     // Side Button 2 (Left)
-    display.draw_text(SIDE_BTN_X + 7, SIDE2_TEXT_Y, "SIDE 2", bsp::graphics::Color::White, bsp::graphics::Color::Black, 1);
+    display.draw_text(SIDE_BTN_X + 7, SIDE2_TEXT_Y, "SIDE 2", bsp::graphics::Color::White, bsp::graphics::Color::Black,
+                      1);
     display.fill_rect(SIDE_BTN_X, SIDE2_BOX_Y, BTN_SIZE, BTN_SIZE, bsp::graphics::Color::Gray);
 
     // 4x4 matrix keys

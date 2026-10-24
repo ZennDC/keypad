@@ -11,7 +11,7 @@ namespace config {
 
 class ConfigManager {
 public:
-    using BrightnessCallback    = std::function<void(uint8_t brightness)>;
+    using BrightnessCallback = std::function<void(uint8_t brightness)>;
     using DisplayConfigCallback = std::function<void(const zdc::protocol::DisplayConfig& cfg)>;
 
     static ConfigManager& instance() {
@@ -33,12 +33,8 @@ public:
     [[nodiscard]] const zdc::protocol::DisplayConfig& display_config() const { return display_cfg_; }
     [[nodiscard]] zdc::protocol::DisplayConfig& display_config() { return display_cfg_; }
 
-    [[nodiscard]] std::span<zdc::protocol::MacroKey> keys() {
-        return {keys_, zdc::protocol::NumMacroKeys};
-    }
-    [[nodiscard]] std::span<const zdc::protocol::MacroKey> keys() const {
-        return {keys_, zdc::protocol::NumMacroKeys};
-    }
+    [[nodiscard]] std::span<zdc::protocol::MacroKey> keys() { return {keys_, zdc::protocol::NumMacroKeys}; }
+    [[nodiscard]] std::span<const zdc::protocol::MacroKey> keys() const { return {keys_, zdc::protocol::NumMacroKeys}; }
 
     [[nodiscard]] zdc::protocol::MacroKey* keys_data() { return keys_; }
 

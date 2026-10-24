@@ -1,8 +1,8 @@
 #pragma once
 
+#include "protocol.hpp"
 #include <cstdint>
 #include <span>
-#include "protocol.hpp"
 
 namespace zdc::usb {
 
@@ -18,5 +18,4 @@ extern "C" {
 
 // C-compatible packet router for tud_hid_set_report_cb
 void handle_keypad_config_packet(const uint8_t* buffer, uint16_t bufsize);
-
 }

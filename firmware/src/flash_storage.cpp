@@ -1,15 +1,15 @@
 #include "flash_storage.hpp"
 #include "hardware/flash.h"
 #include "hardware/sync.h"
-#include <cstring>
 #include <cstddef>
+#include <cstring>
 
 namespace zdc::storage {
 
 namespace {
 // Reserve the very last 4096-byte sector of onboard flash
 constexpr uint32_t TargetOffset = PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE;
-}
+} // namespace
 
 const protocol::PersistentConfig* FlashStorage::flash_target() {
     return reinterpret_cast<const protocol::PersistentConfig*>(XIP_BASE + TargetOffset);
@@ -35,8 +35,7 @@ void FlashStorage::init() {
 std::optional<protocol::PersistentConfig> FlashStorage::read() const {
     const auto* target = flash_target();
 
-    if (target->magic != protocol::FlashConfigMagic || 
-        target->version != protocol::FlashConfigVersion) {
+    if (target->magic != protocol::FlashConfigMagic || target->version != protocol::FlashConfigVersion) {
         return std::nullopt;
     }
 
@@ -74,11 +73,8 @@ bool FlashStorage::reset_defaults() {
     protocol::PersistentConfig defaults{};
     defaults.magic = protocol::FlashConfigMagic;
     defaults.version = protocol::FlashConfigVersion;
-    defaults.display_cfg = protocol::DisplayConfig{
-        .mode = protocol::DisplayMode::HwMonitor,
-        .orientation = 0,
-        .brightness = 80
-    };
+    defaults.display_cfg =
+        protocol::DisplayConfig{.mode = protocol::DisplayMode::HwMonitor, .orientation = 0, .brightness = 80};
 
     return write(defaults);
 }

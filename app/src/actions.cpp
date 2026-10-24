@@ -5,28 +5,33 @@ namespace Actions {
 
 const std::vector<ActionInfo>& catalog() {
     static const std::vector<ActionInfo> actionCatalog = {
-        { QStringLiteral("No Action (Disabled)"), QStringLiteral("None"),
-          QStringLiteral("qrc:/qt/qml/Configurator/assets/icons/square-dashed-plus.svg"), 0x00, 0x0000 },
+        {QStringLiteral("No Action (Disabled)"), QStringLiteral("None"),
+         QStringLiteral("qrc:/qt/qml/Configurator/assets/icons/square-dashed-plus.svg"), 0x00, 0x0000},
         // Consumer / Media Controls
-        { QStringLiteral("Mute Volume"),   QStringLiteral("Mute"),       QStringLiteral("qrc:/qt/qml/Configurator/assets/icons/volume-x.svg"),       0x02, 0x00E2 },
-        { QStringLiteral("Volume Up"),     QStringLiteral("Vol +"),      QStringLiteral("qrc:/qt/qml/Configurator/assets/icons/volume-2.svg"),       0x02, 0x00E9 },
-        { QStringLiteral("Volume Down"),   QStringLiteral("Vol -"),      QStringLiteral("qrc:/qt/qml/Configurator/assets/icons/volume-1.svg"),       0x02, 0x00EA },
-        { QStringLiteral("Play / Pause"),  QStringLiteral("Play/Pause"),  QStringLiteral("qrc:/qt/qml/Configurator/assets/icons/play.svg"),           0x02, 0x00CD },
-        { QStringLiteral("Next Track"),    QStringLiteral("Next"),       QStringLiteral("qrc:/qt/qml/Configurator/assets/icons/fast-forward.svg"),   0x02, 0x00B5 },
-        { QStringLiteral("Previous Track"),QStringLiteral("Prev"),       QStringLiteral("qrc:/qt/qml/Configurator/assets/icons/rewind.svg"),         0x02, 0x00B6 },
+        {QStringLiteral("Mute Volume"), QStringLiteral("Mute"),
+         QStringLiteral("qrc:/qt/qml/Configurator/assets/icons/volume-x.svg"), 0x02, 0x00E2},
+        {QStringLiteral("Volume Up"), QStringLiteral("Vol +"),
+         QStringLiteral("qrc:/qt/qml/Configurator/assets/icons/volume-2.svg"), 0x02, 0x00E9},
+        {QStringLiteral("Volume Down"), QStringLiteral("Vol -"),
+         QStringLiteral("qrc:/qt/qml/Configurator/assets/icons/volume-1.svg"), 0x02, 0x00EA},
+        {QStringLiteral("Play / Pause"), QStringLiteral("Play/Pause"),
+         QStringLiteral("qrc:/qt/qml/Configurator/assets/icons/play.svg"), 0x02, 0x00CD},
+        {QStringLiteral("Next Track"), QStringLiteral("Next"),
+         QStringLiteral("qrc:/qt/qml/Configurator/assets/icons/fast-forward.svg"), 0x02, 0x00B5},
+        {QStringLiteral("Previous Track"), QStringLiteral("Prev"),
+         QStringLiteral("qrc:/qt/qml/Configurator/assets/icons/rewind.svg"), 0x02, 0x00B6},
         // Keyboard Inputs
-        { QStringLiteral("Key: Enter"),    QStringLiteral("Enter"),      QString(), 0x01, 0x0028 },
-        { QStringLiteral("Key: Escape"),   QStringLiteral("Escape"),     QString(), 0x01, 0x0029 },
-        { QStringLiteral("Key: Tab"),      QStringLiteral("Tab"),        QString(), 0x01, 0x002B },
-        { QStringLiteral("Key: Space"),    QStringLiteral("Space"),      QString(), 0x01, 0x002C },
-        { QStringLiteral("Key: C"),        QStringLiteral("C"),          QString(), 0x01, 0x0006 },
-        { QStringLiteral("Key: V"),        QStringLiteral("V"),          QString(), 0x01, 0x0019 },
-        { QStringLiteral("Key: Z"),        QStringLiteral("Z"),          QString(), 0x01, 0x001D },
-        { QStringLiteral("Key: F13"),      QStringLiteral("F13"),        QString(), 0x01, 0x0068 },
-        { QStringLiteral("Key: F14"),      QStringLiteral("F14"),        QString(), 0x01, 0x0069 },
-        { QStringLiteral("Key: F15"),      QStringLiteral("F15"),        QString(), 0x01, 0x006A },
-        { QStringLiteral("Key: F16"),      QStringLiteral("F16"),        QString(), 0x01, 0x006B }
-    };
+        {QStringLiteral("Key: Enter"), QStringLiteral("Enter"), QString(), 0x01, 0x0028},
+        {QStringLiteral("Key: Escape"), QStringLiteral("Escape"), QString(), 0x01, 0x0029},
+        {QStringLiteral("Key: Tab"), QStringLiteral("Tab"), QString(), 0x01, 0x002B},
+        {QStringLiteral("Key: Space"), QStringLiteral("Space"), QString(), 0x01, 0x002C},
+        {QStringLiteral("Key: C"), QStringLiteral("C"), QString(), 0x01, 0x0006},
+        {QStringLiteral("Key: V"), QStringLiteral("V"), QString(), 0x01, 0x0019},
+        {QStringLiteral("Key: Z"), QStringLiteral("Z"), QString(), 0x01, 0x001D},
+        {QStringLiteral("Key: F13"), QStringLiteral("F13"), QString(), 0x01, 0x0068},
+        {QStringLiteral("Key: F14"), QStringLiteral("F14"), QString(), 0x01, 0x0069},
+        {QStringLiteral("Key: F15"), QStringLiteral("F15"), QString(), 0x01, 0x006A},
+        {QStringLiteral("Key: F16"), QStringLiteral("F16"), QString(), 0x01, 0x006B}};
     return actionCatalog;
 }
 
@@ -73,21 +78,15 @@ QVariantList toVariantList() {
 }
 
 const QStringList& displayModes() {
-    static const QStringList modes = {
-        QStringLiteral("Hardware Monitor"),
-        QStringLiteral("Profile Overview"),
-        QStringLiteral("Custom Image")
-    };
+    static const QStringList modes = {QStringLiteral("Hardware Monitor"), QStringLiteral("Profile Overview"),
+                                      QStringLiteral("Custom Image")};
     return modes;
 }
 
 const QStringList& displayOrientations() {
-    static const QStringList orientations = {
-        QStringLiteral("Portrait (0°)"),
-        QStringLiteral("Landscape (90°)"),
-        QStringLiteral("Portrait Inverted (180°)"),
-        QStringLiteral("Landscape Inverted (270°)")
-    };
+    static const QStringList orientations = {QStringLiteral("Portrait (0°)"), QStringLiteral("Landscape (90°)"),
+                                             QStringLiteral("Portrait Inverted (180°)"),
+                                             QStringLiteral("Landscape Inverted (270°)")};
     return orientations;
 }
 

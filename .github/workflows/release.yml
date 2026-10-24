@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Publish Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Keypad Repo
+        uses: actions/checkout@v4
+
+      # --- 1. Build Firmware ---
+      - name: Install ARM GNU Toolchain & Ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib ninja-build
+
+      - name: Cache Pico SDK
+        id: cache-pico-sdk
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/pico-sdk
+          key: pico-sdk-2.3.1
+
+      - name: Setup Pico SDK
+        if: steps.cache-pico-sdk.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 --branch 2.3.1 https://github.com/raspberrypi/pico-sdk.git ${{ runner.temp }}/pico-sdk
+          cd ${{ runner.temp }}/pico-sdk
+          git submodule update --init --depth 1 lib/tinyusb
+
+      - name: Build Firmware
+        env:
+          PICO_SDK_PATH: ${{ runner.temp }}/pico-sdk
+        run: |
+          cmake -B firmware/build -S firmware -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build firmware/build --target Keypad --parallel
+
+      # --- 2. Build Configurator App ---
+      - name: Install App Dependencies
+        run: |
+          sudo apt-get install -y libhidapi-dev pkg-config libgl1-mesa-dev libxkbcommon-dev
+
+      - name: Install Qt 6.10
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.10.*'
+          cache: true
+
+      - name: Build Desktop App
+        run: |
+          cmake -B app/build -S app -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build app/build --target app --parallel
+
+      # --- 3. Package & Publish Release ---
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            firmware/build/Keypad.uf2
+            firmware/build/Keypad.bin
+            app/build/app
+          generate_release_notes: true
