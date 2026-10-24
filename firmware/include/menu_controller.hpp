@@ -54,8 +54,15 @@ private:
     void check_sleep_timer(bsp::Board& board, uint32_t now);
     void wake_display(bsp::Board& board, uint32_t now);
 
+    // Indicators and HUD overlays
+    void update_status_badges(bsp::Display& display, bool force_redraw = false);
+    void render_status_badge(bsp::Display& display, int x, int y, const char* label, bool active);
+
     UIState state_{UIState::Normal};
     MenuItem current_item_{MenuItem::Brightness};
+
+    // LED indicators tracking (NumLock, CapsLock, ScrollLock)
+    uint8_t last_rendered_leds_{0xFF}; // Force initial draw
 
     // Release-based button gesture tracking
     bool btn1_down_{false};

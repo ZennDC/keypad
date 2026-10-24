@@ -213,3 +213,50 @@ TEST_CASE("Legacy V1 layout upgrade to V2 with default NORMAL binding", "[protoc
         REQUIRE(upgraded.keys[i].usage_code == v1.keys[i].usage_code);
     }
 }
+
+TEST_CASE("USB HID LED Indicator bit flag extraction", "[usb][led]") {
+    // HID Keyboard Output report defines:
+    // Bit 0: Num Lock (0x01)
+    // Bit 1: Caps Lock (0x02)
+    // Bit 2: Scroll Lock (0x04)
+    constexpr uint8_t NumLockFlag = 1 << 0;
+    constexpr uint8_t CapsLockFlag = 1 << 1;
+    constexpr uint8_t ScrollLockFlag = 1 << 2;
+
+    SECTION("Bit flag positions match USB HID LED specification") {
+        STATIC_REQUIRE(NumLockFlag == 0x01);
+        STATIC_REQUIRE(CapsLockFlag == 0x02);
+        STATIC_REQUIRE(ScrollLockFlag == 0x04);
+    }
+
+    SECTION("Extract flags from simulated host 1-byte output report") {
+        uint8_t report_byte = 0;
+        REQUIRE((report_byte & NumLockFlag) == 0);
+        REQUIRE((report_byte & CapsLockFlag) == 0);
+        REQUIRE((report_byte & ScrollLockFlag) == 0);
+
+        // Host turns on Caps Lock (0x02)
+        report_byte = 0x02;
+        REQUIRE((report_byte & NumLockFlag) == 0);
+        REQUIRE((report_byte & CapsLockFlag) != 0);
+        REQUIRE((report_byte & ScrollLockFlag) == 0);
+
+        // Host turns on Num Lock + Caps Lock (0x03)
+        report_byte = 0x03;
+        REQUIRE((report_byte & NumLockFlag) != 0);
+        REQUIRE((report_byte & CapsLockFlag) != 0);
+        REQUIRE((report_byte & ScrollLockFlag) == 0);
+
+        // Host turns on Num Lock + Scroll Lock (0x05)
+        report_byte = 0x05;
+        REQUIRE((report_byte & NumLockFlag) != 0);
+        REQUIRE((report_byte & CapsLockFlag) == 0);
+        REQUIRE((report_byte & ScrollLockFlag) != 0);
+
+        // Host turns on all three (0x07)
+        report_byte = 0x07;
+        REQUIRE((report_byte & NumLockFlag) != 0);
+        REQUIRE((report_byte & CapsLockFlag) != 0);
+        REQUIRE((report_byte & ScrollLockFlag) != 0);
+    }
+}

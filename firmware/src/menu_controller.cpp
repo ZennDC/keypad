@@ -5,6 +5,7 @@
 #include "hardware/watchdog.h"
 #include "pico/bootrom.h"
 #include "pico/stdlib.h"
+#include "usb/usb_descriptors.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -80,6 +81,9 @@ void MenuController::draw_key_slot(bsp::Display& display, uint8_t key_idx, bool 
     if (key_idx >= 16)
         return;
 
+    if (state_ != UIState::Normal || is_sleeping_)
+        return;
+
     const int row = key_idx / 4;
     const int col = key_idx % 4;
     const int x = MainStartX + col * (MainBtnW + MainGap);
@@ -94,12 +98,52 @@ void MenuController::draw_key_slot(bsp::Display& display, uint8_t key_idx, bool 
     }
 }
 
+void MenuController::render_status_badge(bsp::Display& display, int x, int y, const char* label, bool active) {
+    // Badge geometry: 32px wide by 14px high
+    const int w = 32;
+    const int h = 14;
+
+    Color border_color = active ? Color::from_rgb(0, 220, 255) : Color::from_rgb(50, 55, 70);
+    Color bg_color = active ? Color::from_rgb(0, 70, 130) : Color::from_rgb(15, 18, 26);
+    Color fg_color = active ? Color::White : Color::from_rgb(80, 90, 110);
+
+    display.fill_rect(x, y, w, h, border_color);
+    display.fill_rect(x + 1, y + 1, w - 2, h - 2, bg_color);
+
+    // Center 3 chars: 3 * 6 - 1 = 17px wide; (32 - 17) / 2 = 7px
+    display.draw_text(x + 7, y + 3, label, fg_color, bg_color, 1);
+}
+
+void MenuController::update_status_badges(bsp::Display& display, bool force_redraw) {
+    if (state_ != UIState::Normal || is_sleeping_)
+        return;
+
+    uint8_t current_leds = zdc::usb::get_led_state();
+
+    if (!force_redraw && current_leds == last_rendered_leds_)
+        return;
+
+    last_rendered_leds_ = current_leds;
+
+    bool num_lock = (current_leds & zdc::usb::NumLock) != 0;
+    bool caps_lock = (current_leds & zdc::usb::CapsLock) != 0;
+    bool scroll_lock = (current_leds & zdc::usb::ScrollLock) != 0;
+
+    // Header bar is at Y = 0..27. Place badges on the right side:
+    // NUM badge: X = 204, Y = 7
+    // CAPS badge: X = 242, Y = 7
+    // SCR badge: X = 280, Y = 7
+    render_status_badge(display, 204, 7, "NUM", num_lock);
+    render_status_badge(display, 242, 7, "CAP", caps_lock);
+    render_status_badge(display, 280, 7, "SCR", scroll_lock);
+}
+
 void MenuController::draw_main_ui(bsp::Display& display) {
     display.clear(Color::Black);
 
     // Header bar (320x28)
     display.fill_rect(0, 0, 320, 28, Color::from_rgb(25, 30, 45));
-    display.draw_text(10, 8, "ZDC MACROPAD - ACTIVE", Color::from_rgb(0, 220, 255), Color::from_rgb(25, 30, 45));
+    display.draw_text(10, 8, "ZDC MACROPAD", Color::from_rgb(0, 220, 255), Color::from_rgb(25, 30, 45));
 
     // Profile indicator
     char profile_buf[32];
@@ -112,6 +156,9 @@ void MenuController::draw_main_ui(bsp::Display& display) {
 
     // USB Status
     display.draw_text(10, 52, "USB: Connected", Color::Green, Color::Black);
+
+    // Status Badges ([NUM] [CAP] [SCR])
+    update_status_badges(display, true);
 
     // 4x4 visual button matrix representation
     for (uint8_t i = 0; i < 16; ++i) {
@@ -498,6 +545,9 @@ void MenuController::update(bsp::Board& board) {
     }
 
     process_side_buttons(board, now);
+
+    // Update non-blocking host LED indicator badges (Num, Caps, Scroll)
+    update_status_badges(board.display);
 }
 
 } // namespace ui

@@ -137,9 +137,36 @@ extern "C" uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, h
     return reqlen;
 }
 
+#include <atomic>
+
+namespace zdc::usb {
+
+static std::atomic<uint8_t> s_led_state{0};
+
+uint8_t get_led_state() {
+    return s_led_state.load(std::memory_order_relaxed);
+}
+
+void set_led_state(uint8_t leds) {
+    s_led_state.store(leds, std::memory_order_relaxed);
+}
+
+} // namespace zdc::usb
+
 extern "C" void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type,
                                       uint8_t const* buffer, uint16_t bufsize) {
     (void)instance;
+
+    // Handle Keyboard LED Output report (1-byte bitmask from host)
+    // report_id is 0 if no ID in report descriptor or ReportId::Keyboard (1)
+    if (report_type == HID_REPORT_TYPE_OUTPUT) {
+        if (report_id == 0 || report_id == static_cast<uint8_t>(ReportId::Keyboard)) {
+            if (bufsize >= 1 && buffer != nullptr) {
+                zdc::usb::set_led_state(buffer[0]);
+            }
+        }
+        return;
+    }
 
     if (report_type == HID_REPORT_TYPE_FEATURE && report_id == static_cast<uint8_t>(ReportId::ConfigFeature)) {
         if (bufsize == 0)
