@@ -18,7 +18,7 @@ cmake_minimum_required(VERSION 3.13)
 # C/C++ Standards & Tooling Exports
 # ---------------------------------------------------------------------------
 set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(PICO_BOARD pico CACHE STRING "Board type")
@@ -48,18 +48,17 @@ target_link_libraries(bsp PUBLIC
     hardware_spi
     hardware_gpio
     hardware_dma
+    hardware_pwm
 )
 
 # ---------------------------------------------------------------------------
 # Main Firmware Executable
 # ---------------------------------------------------------------------------
 add_executable(Keypad
-    src/Keypad.c
-    src/usb_descriptors.c
-    src/flash_storage.c
-    src/backlight.c
-    src/config_manager.c
-    src/matrix.c
+    src/Keypad.cpp
+    src/usb/usb_descriptors.cpp
+    src/flash_storage.cpp
+    src/config_manager.cpp
 )
 
 pico_set_program_name(Keypad "Keypad")
@@ -69,6 +68,7 @@ pico_enable_stdio_uart(Keypad 0)
 pico_enable_stdio_usb(Keypad 0)
 
 target_include_directories(Keypad PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/include
     ${CMAKE_CURRENT_LIST_DIR}/include/usb
     ${CMAKE_CURRENT_LIST_DIR}/../shared/include
 )

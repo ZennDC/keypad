@@ -1,6 +1,7 @@
 #include "bsp/display.hpp"
 #include "bsp/board_config.hpp"
 #include "bsp/font5x8.hpp"
+#include "hardware/pwm.h"
 #include "hardware/gpio.h"
 #include "hardware/spi.h"
 #include "pico/stdlib.h"
@@ -99,8 +100,10 @@ void Display::init() {
 }
 
 void Display::set_backlight(uint8_t percent) {
-    // Simpele digitale switch; kan later naar PWM omgezet worden
-    gpio_put(bl_pin, percent > 0 ? 1 : 0);
+    if (percent > 100) percent = 100;
+    // TFT_BL_PIN is GP22
+    uint slice_num = pwm_gpio_to_slice_num(22);
+    pwm_set_chan_level(slice_num, pwm_gpio_to_channel(22), (percent * 255) / 100);
 }
 
 void Display::fill_rect(int16_t x, int16_t y, uint16_t w, uint16_t h, graphics::Color color) {
