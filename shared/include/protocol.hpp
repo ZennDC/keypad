@@ -40,11 +40,46 @@ enum class ReportType : uint8_t {
 };
 
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 // Binding Types (Normal vs TapDance)
 // ---------------------------------------------------------------------------
 enum class BindingType : uint8_t {
     Normal = 0x00,   // Key down sends immediate HID report (0 ms latency)
     TapDance = 0x01, // Key events intercepted by tap-dance engine & buffer
+};
+
+// ---------------------------------------------------------------------------
+// Standard HID Keycodes
+// ---------------------------------------------------------------------------
+enum class KeyCode : uint8_t {
+    None = 0x00,
+    Return = 0x28,
+    Escape = 0x29,
+    Backspace = 0x2A,
+    Tab = 0x2B,
+    Space = 0x2C,
+    PrintScreen = 0x46,
+    Home = 0x4A,
+    PageUp = 0x4B,
+    Delete = 0x4C,
+    End = 0x4D,
+    PageDown = 0x4E,
+    RightArrow = 0x4F,
+    LeftArrow = 0x50,
+    DownArrow = 0x51,
+    UpArrow = 0x52,
+    F13 = 0x68,
+    F14 = 0x69,
+    F15 = 0x6A,
+    F16 = 0x6B,
+};
+
+// ---------------------------------------------------------------------------
+// Composite System Actions / Macros
+// ---------------------------------------------------------------------------
+enum class MacroCode : uint16_t {
+    LockScreenWinLinux = 0x1001, // Win + L
+    LockScreenMac = 0x1002,      // Cmd + Ctrl + Q
 };
 
 // ---------------------------------------------------------------------------

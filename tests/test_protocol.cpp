@@ -47,6 +47,32 @@ TEST_CASE("Enum definitions match hardware protocol specification", "[protocol]"
     STATIC_REQUIRE(static_cast<uint8_t>(DisplayMode::HwMonitor) == 0);
     STATIC_REQUIRE(static_cast<uint8_t>(DisplayMode::Profile) == 1);
     STATIC_REQUIRE(static_cast<uint8_t>(DisplayMode::Image) == 2);
+
+    // Standard HID Keycodes
+    STATIC_REQUIRE(static_cast<uint8_t>(KeyCode::None) == 0x00);
+    STATIC_REQUIRE(static_cast<uint8_t>(KeyCode::Return) == 0x28);
+    STATIC_REQUIRE(static_cast<uint8_t>(KeyCode::Escape) == 0x29);
+    STATIC_REQUIRE(static_cast<uint8_t>(KeyCode::Backspace) == 0x2A);
+    STATIC_REQUIRE(static_cast<uint8_t>(KeyCode::Tab) == 0x2B);
+    STATIC_REQUIRE(static_cast<uint8_t>(KeyCode::Space) == 0x2C);
+    STATIC_REQUIRE(static_cast<uint8_t>(KeyCode::PrintScreen) == 0x46);
+    STATIC_REQUIRE(static_cast<uint8_t>(KeyCode::Home) == 0x4A);
+    STATIC_REQUIRE(static_cast<uint8_t>(KeyCode::PageUp) == 0x4B);
+    STATIC_REQUIRE(static_cast<uint8_t>(KeyCode::Delete) == 0x4C);
+    STATIC_REQUIRE(static_cast<uint8_t>(KeyCode::End) == 0x4D);
+    STATIC_REQUIRE(static_cast<uint8_t>(KeyCode::PageDown) == 0x4E);
+    STATIC_REQUIRE(static_cast<uint8_t>(KeyCode::RightArrow) == 0x4F);
+    STATIC_REQUIRE(static_cast<uint8_t>(KeyCode::LeftArrow) == 0x50);
+    STATIC_REQUIRE(static_cast<uint8_t>(KeyCode::DownArrow) == 0x51);
+    STATIC_REQUIRE(static_cast<uint8_t>(KeyCode::UpArrow) == 0x52);
+    STATIC_REQUIRE(static_cast<uint8_t>(KeyCode::F13) == 0x68);
+    STATIC_REQUIRE(static_cast<uint8_t>(KeyCode::F14) == 0x69);
+    STATIC_REQUIRE(static_cast<uint8_t>(KeyCode::F15) == 0x6A);
+    STATIC_REQUIRE(static_cast<uint8_t>(KeyCode::F16) == 0x6B);
+
+    // Composite System Actions / Macros
+    STATIC_REQUIRE(static_cast<uint16_t>(MacroCode::LockScreenWinLinux) == 0x1001);
+    STATIC_REQUIRE(static_cast<uint16_t>(MacroCode::LockScreenMac) == 0x1002);
 }
 
 TEST_CASE("Data structures packing, sizes and memory layout", "[protocol]") {

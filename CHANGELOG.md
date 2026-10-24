@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Runtime BOOTSEL countdown: Holding `SideBtn1` for 3.5s displays an on-screen countdown and progress bar before jumping to BOOTSEL.
   - Factory reset countdown: Holding both side buttons for 5.0s displays an on-screen countdown and progress bar before wiping the Flash sector and rebooting with factory defaults.
   - Clean cancelation: Releasing buttons before countdown completion safely aborts the operation and returns to the normal UI.
+- **Composite System Macros**:
+  - Added multi-key sequence dispatcher in firmware event loop for system macros.
+  - Added OS lock screen macros (`Lock Screen (Win/Linux)` via Win+L, `Lock Screen (macOS)` via Cmd+Ctrl+Q).
+  - Extended shared protocol with `MacroCode` and standard `KeyCode` definitions.
+- **Configurator Actions Catalog**:
+  - Added Lock Screen actions with lock icons to the host action catalog.
+  - Added navigation arrow keys (Left, Right, Up, Down) and Print Screen to available keyboard bindings.
 - **Host USB Status Indicators**:
   - Added real-time bidirectional USB HID LED status badges (`[NUM]`, `[CAP]`, `[SCR]`) driven by OS keyboard output reports.
 - **CI/CD & Native Host Test Harness**:

@@ -102,8 +102,10 @@ static void process_keyboard_events(bsp::Board& board) {
     // 2. Aggregate reports: NORMAL keys (immediate) + TAP_DANCE keys (buffer/pulses/holds)
     uint8_t keycodes[6] = {0};
     uint8_t keycode_idx = 0;
+    uint8_t modifiers = 0;
     uint16_t consumer_code = 0;
     bool has_consumer = false;
+    bool has_macro = false;
 
     auto add_keycode = [&](uint8_t code) {
         if (code == 0 || keycode_idx >= 6)
@@ -120,11 +122,46 @@ static void process_keyboard_events(bsp::Board& board) {
         if (board.keys.is_down(static_cast<bsp::Key>(i))) {
             const auto& key_cfg = cfg_mgr.get_active_key_config(i);
             if (key_cfg.binding_type == BindingType::Normal) {
-                if (key_cfg.report_type == ReportType::Consumer) {
+                switch (key_cfg.report_type) {
+                case ReportType::Consumer:
                     consumer_code = key_cfg.usage_code;
                     has_consumer = true;
-                } else if (key_cfg.report_type == ReportType::Keyboard) {
-                    add_keycode(static_cast<uint8_t>(key_cfg.usage_code));
+                    break;
+                case ReportType::Keyboard: {
+                    auto macro = static_cast<MacroCode>(key_cfg.usage_code);
+                    switch (macro) {
+                    case MacroCode::LockScreenWinLinux: {
+                        // Win + L sequence: hold modifier, tap target key, release cleanly
+                        has_macro = true;
+                        uint8_t win_mod = KEYBOARD_MODIFIER_LEFTGUI;
+                        uint8_t l_key[6] = {0x0F, 0, 0, 0, 0, 0}; // 'L'
+                        tud_hid_keyboard_report(static_cast<uint8_t>(ReportId::Keyboard), win_mod, nullptr);
+                        sleep_ms(10);
+                        tud_hid_keyboard_report(static_cast<uint8_t>(ReportId::Keyboard), win_mod, l_key);
+                        sleep_ms(10);
+                        uint8_t empty_keys[6] = {0};
+                        tud_hid_keyboard_report(static_cast<uint8_t>(ReportId::Keyboard), 0, empty_keys);
+                        break;
+                    }
+                    case MacroCode::LockScreenMac: {
+                        // Cmd + Ctrl + Q sequence: hold modifiers, tap target key, release cleanly
+                        has_macro = true;
+                        uint8_t mac_mods = KEYBOARD_MODIFIER_LEFTGUI | KEYBOARD_MODIFIER_LEFTCTRL;
+                        uint8_t q_key[6] = {0x14, 0, 0, 0, 0, 0}; // 'Q'
+                        tud_hid_keyboard_report(static_cast<uint8_t>(ReportId::Keyboard), mac_mods, nullptr);
+                        sleep_ms(10);
+                        tud_hid_keyboard_report(static_cast<uint8_t>(ReportId::Keyboard), mac_mods, q_key);
+                        sleep_ms(10);
+                        uint8_t empty_keys[6] = {0};
+                        tud_hid_keyboard_report(static_cast<uint8_t>(ReportId::Keyboard), 0, empty_keys);
+                        break;
+                    }
+                    default:
+                        add_keycode(static_cast<uint8_t>(key_cfg.usage_code));
+                        break;
+                    }
+                    break;
+                }
                 }
             }
         }
@@ -154,8 +191,8 @@ static void process_keyboard_events(bsp::Board& board) {
     }
 
     // 4. Dispatch Keyboard Report (immediate 0 ms latency for NORMAL keys)
-    if (keycode_idx > 0 || !has_consumer || normal_state_changed || tap_dance_changed) {
-        tud_hid_keyboard_report(static_cast<uint8_t>(ReportId::Keyboard), 0, keycodes);
+    if (!has_macro && (keycode_idx > 0 || !has_consumer || normal_state_changed || tap_dance_changed)) {
+        tud_hid_keyboard_report(static_cast<uint8_t>(ReportId::Keyboard), modifiers, keycodes);
     }
 }
 

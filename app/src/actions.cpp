@@ -28,10 +28,20 @@ const std::vector<ActionInfo>& catalog() {
         {QStringLiteral("Key: C"), QStringLiteral("C"), QString(), 0x01, 0x0006},
         {QStringLiteral("Key: V"), QStringLiteral("V"), QString(), 0x01, 0x0019},
         {QStringLiteral("Key: Z"), QStringLiteral("Z"), QString(), 0x01, 0x001D},
+        {QStringLiteral("Key: Print Screen"), QStringLiteral("PrtScn"), QString(), 0x01, 0x0046},
+        {QStringLiteral("Key: Right Arrow"), QStringLiteral("Right"), QString(), 0x01, 0x004F},
+        {QStringLiteral("Key: Left Arrow"), QStringLiteral("Left"), QString(), 0x01, 0x0050},
+        {QStringLiteral("Key: Down Arrow"), QStringLiteral("Down"), QString(), 0x01, 0x0051},
+        {QStringLiteral("Key: Up Arrow"), QStringLiteral("Up"), QString(), 0x01, 0x0052},
         {QStringLiteral("Key: F13"), QStringLiteral("F13"), QString(), 0x01, 0x0068},
         {QStringLiteral("Key: F14"), QStringLiteral("F14"), QString(), 0x01, 0x0069},
         {QStringLiteral("Key: F15"), QStringLiteral("F15"), QString(), 0x01, 0x006A},
-        {QStringLiteral("Key: F16"), QStringLiteral("F16"), QString(), 0x01, 0x006B}};
+        {QStringLiteral("Key: F16"), QStringLiteral("F16"), QString(), 0x01, 0x006B},
+        // Composite System Actions / Macros
+        {QStringLiteral("Lock Screen (Win/Linux)"), QStringLiteral("Lock (Win)"),
+         QStringLiteral("qrc:/qt/qml/Configurator/assets/icons/lock.svg"), 0x01, 0x1001},
+        {QStringLiteral("Lock Screen (macOS)"), QStringLiteral("Lock (Mac)"),
+         QStringLiteral("qrc:/qt/qml/Configurator/assets/icons/lock.svg"), 0x01, 0x1002}};
     return actionCatalog;
 }
 
