@@ -8,30 +8,39 @@ namespace config {
 
 using namespace zdc::protocol;
 
-const PersistentConfig ConfigManager::default_config_ = {
-    .magic = FlashConfigMagic,
-    .version = FlashConfigVersion,
-    .display_cfg = {.mode = DisplayMode::HwMonitor, .orientation = 0, .brightness = 80},
-    .keys =
-        {
-            {ReportType::Consumer, BindingType::Normal, 0x00E9}, // Volume Increment
-            {ReportType::Consumer, BindingType::Normal, 0x00EA}, // Volume Decrement
-            {ReportType::Consumer, BindingType::Normal, 0x00CD}, // Play / Pause
-            {ReportType::Consumer, BindingType::Normal, 0x00B5}, // Next Track
-            {ReportType::Consumer, BindingType::Normal, 0x00B6}, // Previous Track
-            {ReportType::Keyboard, BindingType::Normal, 0x28},   // Enter
-            {ReportType::Keyboard, BindingType::Normal, 0x29},   // Escape
-            {ReportType::Keyboard, BindingType::Normal, 0x2B},   // Tab
-            {ReportType::Keyboard, BindingType::Normal, 0x2C},   // Space
-            {ReportType::Keyboard, BindingType::Normal, 0x06},   // 'C'
-            {ReportType::Keyboard, BindingType::Normal, 0x19},   // 'V'
-            {ReportType::Keyboard, BindingType::Normal, 0x1D},   // 'Z'
-            {ReportType::Keyboard, BindingType::Normal, 0x68},   // F13
-            {ReportType::Keyboard, BindingType::Normal, 0x69},   // F14
-            {ReportType::Keyboard, BindingType::Normal, 0x6A},   // F15
-            {ReportType::Keyboard, BindingType::Normal, 0x6B},   // F16
-        },
-    .checksum = 0};
+const PersistentConfig
+    ConfigManager::default_config_ =
+        {.magic = FlashConfigMagic,
+         .version = FlashConfigVersion,
+         .display_cfg = {.mode = DisplayMode::HwMonitor, .orientation = 0, .brightness = 80},
+         .profile_count = 1,
+         .active_profile = 0,
+         .reserved = {0, 0},
+         .profiles =
+             {
+                 {
+                     .name = "Custom",
+                     .keys =
+                         {
+                             {ReportType::Consumer, BindingType::Normal, 0x00E9}, // Volume Increment
+                             {ReportType::Consumer, BindingType::Normal, 0x00EA}, // Volume Decrement
+                             {ReportType::Consumer, BindingType::Normal, 0x00CD}, // Play / Pause
+                             {ReportType::Consumer, BindingType::Normal, 0x00B5}, // Next Track
+                             {ReportType::Consumer, BindingType::Normal, 0x00B6}, // Previous Track
+                             {ReportType::Keyboard, BindingType::Normal, 0x28},   // Enter
+                             {ReportType::Keyboard, BindingType::Normal, 0x29},   // Escape
+                             {ReportType::Keyboard, BindingType::Normal, 0x2B},   // Tab
+                             {ReportType::Keyboard, BindingType::Normal, 0x2C},   // Space
+                             {ReportType::Keyboard, BindingType::Normal, 0x06},   // 'C'
+                             {ReportType::Keyboard, BindingType::Normal, 0x19},   // 'V'
+                             {ReportType::Keyboard, BindingType::Normal, 0x1D},   // 'Z'
+                             {ReportType::Keyboard, BindingType::Normal, 0x68},   // F13
+                             {ReportType::Keyboard, BindingType::Normal, 0x69},   // F14
+                             {ReportType::Keyboard, BindingType::Normal, 0x6A},   // F15
+                             {ReportType::Keyboard, BindingType::Normal, 0x6B},   // F16
+                         },
+                 }},
+         .checksum = 0};
 
 void ConfigManager::init() {
     auto& storage = zdc::storage::FlashStorage::instance();
@@ -40,14 +49,17 @@ void ConfigManager::init() {
     auto stored = storage.read();
     if (stored.has_value()) {
         display_cfg_ = stored->display_cfg;
+        const auto& active_keys = (stored->active_profile < stored->profile_count)
+                                      ? stored->profiles[stored->active_profile].keys
+                                      : stored->profiles[0].keys;
         for (size_t i = 0; i < NumMacroKeys; ++i) {
-            keys_[i].config = stored->keys[i];
+            keys_[i].config = active_keys[i];
             keys_[i].was_pressed = false;
         }
     } else {
         display_cfg_ = default_config_.display_cfg;
         for (size_t i = 0; i < NumMacroKeys; ++i) {
-            keys_[i].config = default_config_.keys[i];
+            keys_[i].config = default_config_.profiles[0].keys[i];
             keys_[i].was_pressed = false;
         }
         save_to_flash();
@@ -55,10 +67,12 @@ void ConfigManager::init() {
 }
 
 bool ConfigManager::save_to_flash() {
-    PersistentConfig to_save{};
+    auto stored = zdc::storage::FlashStorage::instance().read();
+    PersistentConfig to_save = stored.value_or(default_config_);
     to_save.display_cfg = display_cfg_;
+    uint8_t profile_idx = (to_save.active_profile < to_save.profile_count) ? to_save.active_profile : 0;
     for (size_t i = 0; i < NumMacroKeys; ++i) {
-        to_save.keys[i] = keys_[i].config;
+        to_save.profiles[profile_idx].keys[i] = keys_[i].config;
     }
     return zdc::storage::FlashStorage::instance().write(to_save);
 }
@@ -207,7 +221,7 @@ const KeyConfig& ConfigManager::get_active_key_config(uint8_t index) const {
 bool ConfigManager::reset_to_factory_defaults() {
     display_cfg_ = default_config_.display_cfg;
     for (size_t i = 0; i < NumMacroKeys; ++i) {
-        keys_[i].config = default_config_.keys[i];
+        keys_[i].config = default_config_.profiles[0].keys[i];
         keys_[i].was_pressed = false;
     }
     return zdc::storage::FlashStorage::instance().write(default_config_);

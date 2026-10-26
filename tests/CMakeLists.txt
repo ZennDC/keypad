@@ -17,10 +17,12 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(protocol_tests
     test_protocol.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../firmware/src/flash_storage.cpp
 )
 
 target_include_directories(protocol_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../shared/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../firmware/include
 )
 
 target_link_libraries(protocol_tests PRIVATE

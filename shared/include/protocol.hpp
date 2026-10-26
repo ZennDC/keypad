@@ -10,8 +10,10 @@ namespace zdc::protocol {
 // ---------------------------------------------------------------------------
 inline constexpr size_t ConfigReportSize = 64;
 inline constexpr size_t NumMacroKeys = 16;
+inline constexpr size_t MaxProfiles = 4;
+inline constexpr size_t ProfileNameLength = 16;
 inline constexpr uint32_t FlashConfigMagic = 0x5A444331; // ASCII "ZDC1"
-inline constexpr uint8_t FlashConfigVersion = 2;
+inline constexpr uint8_t FlashConfigVersion = 3;
 
 // ---------------------------------------------------------------------------
 // HID Report IDs
@@ -115,12 +117,21 @@ struct MacroKey {
     bool was_pressed{false};
 };
 
+// Persistent profile definition (stored in Flash)
+struct [[gnu::packed]] ProfileConfig {
+    char name[ProfileNameLength]{};
+    KeyConfig keys[NumMacroKeys]{};
+};
+
 // Flash persistent image (aligned to 4 bytes for RP2040 flash controller)
 struct alignas(4) PersistentConfig {
     uint32_t magic{FlashConfigMagic};
     uint8_t version{FlashConfigVersion};
     DisplayConfig display_cfg{};
-    KeyConfig keys[NumMacroKeys]{};
+    uint8_t profile_count{1};
+    uint8_t active_profile{0};
+    uint8_t reserved[2]{0, 0};
+    ProfileConfig profiles[MaxProfiles]{};
     uint8_t checksum{0};
 };
 

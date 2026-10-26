@@ -51,8 +51,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Keys configured as `TAP_DANCE` are routed to the timing buffer and tap-dance state machine (single-tap, double-tap, and hold gestures).
   - Main event loop aggregates active `NORMAL` keys with active `TAP_DANCE` pulses and hold states before USB report transmission.
 - **Flash Storage & Configuration Versioning**:
-  - Incremented `FlashConfigVersion` from `1` to `2`.
-  - Updated default configurations and presets (`NumpadPreset`, `MediaPreset`, `NavPreset`) to default to `BindingType::Normal`.
-  - Updated `ConfigManager::handle_packet` to parse optional 5th byte in single-key feature reports for `binding_type`.
+  - Incremented `FlashConfigVersion` to `3`.
+  - Added variable multi-profile persistent storage support (limited to `MaxProfiles = 4` profiles, each with `name` and 16 key bindings).
+  - Extended `FlashStorage` with profile CRUD API (`profile_count`, `active_profile_index`, `set_active_profile_index`, `get_profile`, `set_profile`, `add_profile`, `remove_profile`).
+  - Added backwards compatibility migration in `FlashStorage::read()` from Version 1 and Version 2 single-profile layouts to Version 3.
+  - Added unit test suite covering `ProfileConfig` layout, multi-profile checksum verification, serialization round-trip, profile bounds checking, and legacy V1/V2 upgrades.
 - **Firmware Build System**:
   - Included `src/tap_dance.cpp` in `Keypad` executable sources in `firmware/CMakeLists.txt`.
