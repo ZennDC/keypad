@@ -49,6 +49,11 @@ QStringList DeviceController::displayOrientations() const {
     return Actions::displayOrientations();
 }
 
+QStringList DeviceController::profiles() const {
+    return {QStringLiteral("Custom"), QStringLiteral("Numpad"), QStringLiteral("Media"),
+            QStringLiteral("Navigation")};
+}
+
 bool DeviceController::connectDevice() {
     return m_transport->openDevice();
 }
@@ -85,6 +90,83 @@ bool DeviceController::fetchDeviceConfig() {
     emit displayConfigLoaded();
 
     updateStatus(QStringLiteral("Connected to Keypad"));
+    return true;
+}
+
+bool DeviceController::selectProfile(int profileIndex) {
+    if (profileIndex < 0 || profileIndex >= 4) {
+        return false;
+    }
+
+    m_currentProfile = profileIndex;
+    emit currentProfileChanged();
+
+    if (m_transport->isConnected()) {
+        std::array<uint8_t, ConfigReportSize> reportBuf{};
+        reportBuf[0] = ConfigReportId;
+        reportBuf[1] = static_cast<uint8_t>(Command::SelectProfile);
+        reportBuf[2] = static_cast<uint8_t>(profileIndex);
+
+        if (!m_transport->sendFeatureReport(reportBuf)) {
+            return false;
+        }
+
+        // Fetch the keys for the newly selected profile from firmware
+        fetchDeviceConfig();
+    } else {
+        // Fallback offline preview: reload presets matching firmware definitions
+        static const std::array<KeyState, NumMacroKeys> NumpadPreset = {{
+            {1, 0x5F}, {1, 0x60}, {1, 0x61}, {1, 0x54},
+            {1, 0x5C}, {1, 0x5D}, {1, 0x5E}, {1, 0x55},
+            {1, 0x59}, {1, 0x5A}, {1, 0x5B}, {1, 0x56},
+            {1, 0x62}, {1, 0x63}, {1, 0x58}, {1, 0x57}
+        }};
+
+        static const std::array<KeyState, NumMacroKeys> MediaPreset = {{
+            {2, 0x00E2}, {2, 0x00EA}, {2, 0x00E9}, {2, 0x00CD},
+            {2, 0x00B6}, {2, 0x00B5}, {2, 0x00B7}, {2, 0x00B3},
+            {2, 0x00B4}, {2, 0x0192}, {2, 0x0194}, {2, 0x0223},
+            {2, 0x0070}, {2, 0x006F}, {2, 0x0032}, {2, 0x00B8}
+        }};
+
+        static const std::array<KeyState, NumMacroKeys> NavPreset = {{
+            {1, 0x29}, {1, 0x4A}, {1, 0x52}, {1, 0x4B},
+            {1, 0x2B}, {1, 0x50}, {1, 0x51}, {1, 0x4F},
+            {1, 0x2A}, {1, 0x4D}, {1, 0x28}, {1, 0x4E},
+            {1, 0x68}, {1, 0x69}, {1, 0x6A}, {1, 0x4C}
+        }};
+
+        static const std::array<KeyState, NumMacroKeys> CustomPreset = {{
+            {2, 0x00E9}, {2, 0x00EA}, {2, 0x00CD}, {2, 0x00B5},
+            {2, 0x00B6}, {1, 0x28},   {1, 0x29},   {1, 0x2B},
+            {1, 0x2C},   {1, 0x06},   {1, 0x19},   {1, 0x1D},
+            {1, 0x68},   {1, 0x69},   {1, 0x6A},   {1, 0x6B}
+        }};
+
+        const KeyState* preset = nullptr;
+        switch (profileIndex) {
+        case 1:
+            preset = NumpadPreset.data();
+            break;
+        case 2:
+            preset = MediaPreset.data();
+            break;
+        case 3:
+            preset = NavPreset.data();
+            break;
+        default:
+            preset = CustomPreset.data();
+            break;
+        }
+
+        std::vector<KeyState> newKeys(preset, preset + NumMacroKeys);
+        m_keyModel->resetKeys(newKeys);
+    }
+
+    const QStringList profList = profiles();
+    if (profileIndex < profList.size()) {
+        updateStatus(QStringLiteral("Selected Profile: %1").arg(profList[profileIndex]));
+    }
     return true;
 }
 

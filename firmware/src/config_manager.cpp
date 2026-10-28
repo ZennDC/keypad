@@ -88,6 +88,13 @@ void ConfigManager::handle_packet(std::span<const uint8_t> buffer) {
         return;
     }
 
+    if (cmd_byte == static_cast<uint8_t>(Command::SelectProfile)) {
+        if (buffer.size() >= 2) {
+            select_profile(buffer[1]);
+        }
+        return;
+    }
+
     if (buffer.size() < 4)
         return;
 
@@ -190,6 +197,10 @@ std::string_view ConfigManager::active_profile_name() const {
     default:
         return "Custom";
     }
+}
+
+void ConfigManager::select_profile(uint8_t profile) {
+    current_profile_ = profile % 4;
 }
 
 void ConfigManager::next_profile() {

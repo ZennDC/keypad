@@ -119,9 +119,10 @@ extern "C" uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, h
         const auto& display_cfg = cfg_mgr.display_config();
 
         for (size_t i = 0; i < NumMacroKeys && (offset + 3) <= reqlen; ++i) {
-            buffer[offset++] = static_cast<uint8_t>(keys[i].config.report_type);
-            buffer[offset++] = static_cast<uint8_t>(keys[i].config.usage_code & 0xFF);
-            buffer[offset++] = static_cast<uint8_t>((keys[i].config.usage_code >> 8) & 0xFF);
+            const auto& key_cfg = cfg_mgr.get_active_key_config(static_cast<uint8_t>(i));
+            buffer[offset++] = static_cast<uint8_t>(key_cfg.report_type);
+            buffer[offset++] = static_cast<uint8_t>(key_cfg.usage_code & 0xFF);
+            buffer[offset++] = static_cast<uint8_t>((key_cfg.usage_code >> 8) & 0xFF);
         }
 
         if ((offset + 3) <= reqlen) {

@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Profile Selection & Dynamic Matrix Reload in Configurator**:
+  - Added profile selection combo box directly above the device matrix view in the desktop app UI (`Main.qml`).
+  - Selecting a profile immediately sends `Command::SelectProfile` (or switches preview preset offline) and reloads all 16 key bindings in `KeyModel` so the user directly sees the active keys, badges, and icons for that profile.
+- **Protocol & Firmware Profile Switching Support**:
+  - Added `Command::SelectProfile = 0xA1` to shared protocol definitions.
+  - Implemented `ConfigManager::select_profile()` and `handle_packet()` handling for `Command::SelectProfile` on RP2040 firmware.
+  - Updated `tud_hid_get_report_cb` in firmware USB stack to query `get_active_key_config()` dynamically so host feature report queries return the active profile's key configuration.
 - **Side Buttons & On-Screen Settings Menu**:
   - Implemented release-based gesture engine for side buttons (`SideBtn1` on GP28 = Up/Previous profile, `SideBtn2` on GP29 = Down/Next profile, dual-button press = Select / Enter / Open Settings Menu).
   - Added Settings Menu options: display brightness adjustment (20%–100%), sleep timeout selection (Off, 1m, 5m, 15m), direct BOOTSEL / UF2 reboot, and Save & Exit to Flash.

@@ -32,6 +32,57 @@ ApplicationWindow {
 
             ConnectionHeader {}
 
+            Rectangle {
+                Layout.fillWidth: true
+                implicitHeight: 52
+                radius: Theme.radiusCard
+                color: Theme.bgCard
+                border.color: Theme.border
+                border.width: 1
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 16
+                    anchors.rightMargin: 16
+                    spacing: 12
+
+                    Label {
+                        text: "Active Profile:"
+                        color: Theme.accent
+                        font.bold: true
+                        font.pixelSize: 13
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+
+                    ComboBox {
+                        id: profileCombo
+                        Layout.preferredWidth: 200
+                        model: Backend.profiles
+                        currentIndex: Backend.currentProfile
+
+                        onActivated: function(index) {
+                            Backend.selectProfile(index);
+                        }
+
+                        Connections {
+                            target: Backend
+                            function onCurrentProfileChanged() {
+                                profileCombo.currentIndex = Backend.currentProfile;
+                            }
+                        }
+                    }
+
+                    Label {
+                        text: "Selecting a profile reloads all 16 key bindings in the matrix."
+                        color: Theme.textSecondary
+                        font.pixelSize: 11
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignVCenter
+                        elide: Text.ElideRight
+                    }
+                }
+            }
+
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 20

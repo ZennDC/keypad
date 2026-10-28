@@ -38,6 +38,7 @@ TEST_CASE("Enum definitions match hardware protocol specification", "[protocol]"
     STATIC_REQUIRE(static_cast<uint8_t>(ReportId::ConsumerControl) == 2);
     STATIC_REQUIRE(static_cast<uint8_t>(ReportId::ConfigFeature) == 3);
 
+    STATIC_REQUIRE(static_cast<uint8_t>(Command::SelectProfile) == 0xA1);
     STATIC_REQUIRE(static_cast<uint8_t>(Command::Bootloader) == 0xBB);
     STATIC_REQUIRE(static_cast<uint8_t>(Command::SaveToFlash) == 0xAA);
     STATIC_REQUIRE(static_cast<uint8_t>(Command::ConfigTargetDisplay) == 0xFF);

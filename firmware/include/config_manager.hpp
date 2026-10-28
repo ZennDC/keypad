@@ -42,6 +42,7 @@ public:
     // Profile / Layer management
     [[nodiscard]] uint8_t active_profile() const { return current_profile_; }
     [[nodiscard]] std::string_view active_profile_name() const;
+    void select_profile(uint8_t profile);
     void next_profile();
     void prev_profile();
     [[nodiscard]] const zdc::protocol::KeyConfig& get_active_key_config(uint8_t index) const;

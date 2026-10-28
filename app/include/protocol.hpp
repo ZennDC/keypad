@@ -28,6 +28,7 @@ enum class ReportId : uint8_t {
 // Protocol Commands (Byte 0 in Feature / Config Packets)
 // ---------------------------------------------------------------------------
 enum class Command : uint8_t {
+    SelectProfile = 0xA1,       // Selects active profile (Byte 1: profile index)
     Bootloader = 0xBB,          // Reboots board to BOOTSEL / UF2 drive
     SaveToFlash = 0xAA,         // Persists current RAM config to flash
     ConfigTargetDisplay = 0xFF, // Configures screen mode, rotation, brightness

@@ -25,6 +25,8 @@ class DeviceController : public QObject {
     Q_PROPERTY(int displayMode READ displayMode NOTIFY displayConfigLoaded)
     Q_PROPERTY(int displayOrientation READ displayOrientation NOTIFY displayConfigLoaded)
     Q_PROPERTY(int displayBrightness READ displayBrightness NOTIFY displayConfigLoaded)
+    Q_PROPERTY(QStringList profiles READ profiles CONSTANT)
+    Q_PROPERTY(int currentProfile READ currentProfile NOTIFY currentProfileChanged)
 
 public:
     explicit DeviceController(QObject* parent = nullptr);
@@ -39,11 +41,14 @@ public:
     [[nodiscard]] int displayMode() const noexcept { return m_displayMode; }
     [[nodiscard]] int displayOrientation() const noexcept { return m_displayOrientation; }
     [[nodiscard]] int displayBrightness() const noexcept { return m_displayBrightness; }
+    [[nodiscard]] QStringList profiles() const;
+    [[nodiscard]] int currentProfile() const noexcept { return m_currentProfile; }
 
     Q_INVOKABLE bool connectDevice();
     Q_INVOKABLE void disconnectDevice();
     Q_INVOKABLE bool fetchDeviceConfig();
 
+    Q_INVOKABLE bool selectProfile(int profileIndex);
     Q_INVOKABLE bool sendKeyConfig(int keyIndex, int reportType, int usageCode);
     Q_INVOKABLE bool sendDisplayConfig(int mode, int orientation, int brightness);
     Q_INVOKABLE bool saveToFlash();
@@ -54,6 +59,7 @@ signals:
     void statusChanged();
     void keysChanged();
     void displayConfigLoaded();
+    void currentProfileChanged();
 
 private:
     void updateStatus(const QString& text);
@@ -65,6 +71,7 @@ private:
     int m_displayMode = 0;
     int m_displayOrientation = 0;
     int m_displayBrightness = 80;
+    int m_currentProfile = 0;
 
     static constexpr uint16_t VID = 0xCafe;
     static constexpr uint16_t PID = 0x4000;
